@@ -1,0 +1,19 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, bugbear, pyupgrade, simplify
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+ignore = [
+    "B008",  # FastAPI uses Depends(...) / Query(...) in argument defaults by design
+    "E501",  # line length is left to `ruff format`; long SQL strings stay on one line
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests configure the environment before importing the app.
+"tests/conftest.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]

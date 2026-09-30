@@ -1,0 +1,27 @@
+# docker compose up --build   →   http://localhost:8080
+#
+# Secrets come from backend/.env at runtime (never baked into an image). It must set
+# APP_SECRET_KEY (32+ bytes). Add APP_ENV=development for the demo accounts; the default
+# (production) seeds no users.
+services:
+  backend:
+    build: ./backend
+    env_file: backend/.env
+    environment:
+      DB_PATH: /data/app.db
+    volumes:
+      - fingen-data:/data
+    restart: unless-stopped
+    # Not published: only the frontend container can reach it.
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  fingen-data:

@@ -1,0 +1,259 @@
+/* ── Not yet earned ─────────────────────────── */
+.requirements {
+  text-align: left;
+}
+
+.bigIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.listTitle {
+  margin: var(--space-5) 0 var(--space-2);
+  font: 700 var(--text-sm) / 1.4 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.missing {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.missing li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.missing svg {
+  color: var(--color-warning);
+  flex-shrink: 0;
+}
+
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.progressHead {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.progressTitle {
+  font-weight: 600;
+}
+
+.ok {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 600;
+  color: var(--color-success);
+}
+
+/* ── Earned ─────────────────────────────────── */
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-4);
+}
+
+.certificate {
+  position: relative;
+  padding: var(--space-7) var(--space-6);
+  border: 8px double var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+  text-align: center;
+  overflow: hidden;
+}
+
+.corner {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border: 0 solid var(--color-accent);
+}
+
+.tl {
+  top: 12px;
+  left: 12px;
+  border-top-width: 3px;
+  border-left-width: 3px;
+}
+.tr {
+  top: 12px;
+  right: 12px;
+  border-top-width: 3px;
+  border-right-width: 3px;
+}
+.bl {
+  bottom: 12px;
+  left: 12px;
+  border-bottom-width: 3px;
+  border-left-width: 3px;
+}
+.br {
+  bottom: 12px;
+  right: 12px;
+  border-bottom-width: 3px;
+  border-right-width: 3px;
+}
+
+.seal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin-bottom: var(--space-5);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  box-shadow: var(--shadow-md);
+}
+
+.kicker {
+  margin: 0 0 var(--space-2);
+  font: 700 var(--text-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.org {
+  margin: 0 0 var(--space-1);
+  font: 800 1.6rem / 1.2 var(--font-display);
+  color: var(--color-heading);
+}
+
+.programme {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.certifies {
+  margin: 0 auto var(--space-2);
+  max-width: 52ch;
+  color: var(--color-text);
+}
+
+.name {
+  margin: var(--space-2) 0 var(--space-3);
+  font: italic 800 2rem / 1.2 var(--font-display);
+  color: var(--color-accent);
+}
+
+.paths {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.paths li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font: 700 var(--text-xs) / 1.5 var(--font-sans);
+}
+
+.date {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.signatures {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-7);
+}
+
+.signature {
+  min-width: 170px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-strong);
+}
+
+.sigName {
+  margin: 0;
+  font: 700 var(--text-sm) / 1.4 var(--font-sans);
+  color: var(--color-heading);
+}
+.sigRole {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.back {
+  margin-top: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+.back a {
+  color: var(--color-text-muted);
+}
+.back a:hover {
+  color: var(--color-accent);
+}
+
+@media (max-width: 600px) {
+  .certificate {
+    padding: var(--space-6) var(--space-4);
+  }
+  .name {
+    font-size: 1.6rem;
+  }
+}
+
+/* Always print on white, whatever the screen theme. */
+@media print {
+  .certificate {
+    --color-surface: #fff;
+    --color-text: #0f1733;
+    --color-text-muted: #4d5673;
+    --color-heading: #020b5b;
+    --color-accent: #001aff;
+    --color-accent-contrast: #fff;
+    --color-success: #13723a;
+    --color-success-soft: #e3f4e9;
+    --color-border-strong: #9aa1b8;
+    box-shadow: none;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}

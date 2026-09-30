@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450" role="img" aria-labelledby="t">
+  <title id="t">Transaction flow: Initiation, Authorisation, Settlement, Reconciliation and GL Posting connected in sequence</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eef0ff"/>
+      <stop offset="1" stop-color="#dfe4ff"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M0 0 L10 5 L0 10 z" fill="#001aff"/>
+    </marker>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <circle cx="150" cy="360" r="120" fill="#001aff" fill-opacity=".06"/>
+  <circle cx="730" cy="40" r="90" fill="#001aff" fill-opacity=".05"/>
+
+  <!-- Connectors: across the top, down, then back along the bottom -->
+  <g fill="none" stroke="#001aff" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)">
+    <path d="M 205 140 L 316 140"/>
+    <path d="M 485 140 L 586 140"/>
+    <path d="M 670 170 L 670 262"/>
+    <path d="M 586 300 L 485 300"/>
+  </g>
+
+  <!-- Data packets on the move -->
+  <g fill="#020b5b">
+    <circle cx="255" cy="140" r="6"/>
+    <circle cx="530" cy="140" r="6"/>
+    <circle cx="670" cy="215" r="6"/>
+    <circle cx="540" cy="300" r="6"/>
+  </g>
+
+  <g font-family="Inter, Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle">
+    <rect x="55" y="110" width="150" height="60" rx="12" fill="#ffffff" stroke="#001aff" stroke-width="2"/>
+    <text x="130" y="146" fill="#020b5b">Initiation</text>
+
+    <rect x="320" y="110" width="160" height="60" rx="12" fill="#ffffff" stroke="#001aff" stroke-width="2"/>
+    <text x="400" y="146" fill="#020b5b">Authorisation</text>
+
+    <rect x="590" y="110" width="160" height="60" rx="12" fill="#001aff"/>
+    <text x="670" y="146" fill="#ffffff">Settlement</text>
+
+    <rect x="590" y="270" width="160" height="60" rx="12" fill="#ffffff" stroke="#001aff" stroke-width="2"/>
+    <text x="670" y="306" fill="#020b5b">Reconciliation</text>
+
+    <rect x="320" y="270" width="160" height="60" rx="12" fill="#020b5b"/>
+    <text x="400" y="306" fill="#ffffff">GL Posting</text>
+  </g>
+
+  <!-- Step numbers -->
+  <g font-family="Inter, Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" text-anchor="middle" fill="#ffffff">
+    <circle cx="67" cy="110" r="13" fill="#020b5b"/><text x="67" y="114">1</text>
+    <circle cx="332" cy="110" r="13" fill="#020b5b"/><text x="332" y="114">2</text>
+    <circle cx="602" cy="110" r="13" fill="#020b5b"/><text x="602" y="114">3</text>
+    <circle cx="602" cy="270" r="13" fill="#020b5b"/><text x="602" y="274">4</text>
+    <circle cx="332" cy="270" r="13" fill="#001aff"/><text x="332" y="274">5</text>
+  </g>
+</svg>

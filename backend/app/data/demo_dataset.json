@@ -1,0 +1,1525 @@
+{
+  "paths": [
+    {
+      "id": 1,
+      "slug": "platform-core",
+      "title": "Fingen Platform Core",
+      "description": "Understand the Fingen application suite, module architecture, and core system concepts.",
+      "nodes": [
+        {
+          "id": 1,
+          "path_id": 1,
+          "slug": "platform-architecture",
+          "title": "Platform Architecture",
+          "description": "Overview of Fingen's multitier architecture and environment topology.",
+          "content": "## Overview\nFingen is a cloud hosted financial operations platform built on a microservices architecture across three isolated environments. Understanding the platform topology is the starting point for every L2 incident.\n\n## Architecture Tiers\n- **Presentation Layer**: React Web Portal and client facing REST API\n- **Application Layer**: Five independently deployable microservices: Account Service (8001), Transaction Service (8002), Reporting Service (8003), Integration Gateway (8004), Config Service (8005)\n- **Data Layer**: PostgreSQL primary database, Redis cache (session & dedup), S3-compatible blob storage\n\n## Environments\n- **Development**: Engineer workstations and CI pipelines; never holds real client data\n- **UAT**: Preproduction validation; mirrors Production schema; used for change verification and client sign off\n- **Production**: Live environment serving all clients; all changes require an approved Change Request (CR)\n\n## Service Health Dashboard\nThe Operations Dashboard shows RED / AMBER / GREEN per service. AMBER = degraded but operational (error rate 1 to 5%). RED = down or error rate above SLA threshold (>5%). The status change timestamp is your incident start time.\n\n## L2 Diagnostic Entry Point\nWhen an incident is raised: (1) identify the affected service from the dashboard, (2) pull service logs for ERROR/CRITICAL entries in the incident window, (3) confirm whether the issue is isolated to one account or platform wide before escalating.",
+          "dependencies": [],
+          "sample_question": "Describe the three environments in Fingen and explain why each exists.",
+          "sample_answer": "Development is used for active coding and unit testing. UAT is used to validate features before going live. Production serves live customers. Keeping them separate protects customer data and prevents untested code from reaching end users.",
+          "scenario_context": "You are onboarding to the client account. A colleague asks you to test a new feature configuration before it goes live. Which environment should you use?",
+          "scenario_options": [
+            "Production, because it has the most realistic data",
+            "UAT: the preproduction environment for validating changes before going live",
+            "Development, which is used for active feature work and unit tests",
+            "Ask the client to test it directly in their portal"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "UAT is the preproduction validation environment. Using Production would risk impacting live customers. Development is for developer unit testing, not prelaunch validation.",
+          "runbook_ids": []
+        },
+        {
+          "id": 2,
+          "path_id": 1,
+          "slug": "user-access-management",
+          "title": "User & Access Management",
+          "description": "Role based access control, user provisioning, and permission tiers in Fingen.",
+          "content": "## Overview\nFingen uses Role Based Access Control (RBAC) to govern which modules and actions each user can perform. Access issues are among the most common L2 tickets.\n\n## Roles and Permissions\n- **Admin**: Full read/write across all modules including Config Service\n- **Operator**: Read/write for Accounts and Transactions; no Config access\n- **Viewer**: Read only across Accounts, Transactions, and Reports\n- **Support**: Read only for Accounts, Transactions, and Audit Logs (standard L2 role)\n\n## User Provisioning Flow\n1. Access request raised via the client's identity provider (Azure AD or Okta)\n2. IdP syncs user to Fingen via POST /api/users/sync\n3. Role assigned in Fingen Admin Panel\n4. User receives first login email (link expires in 24 hours)\n\n## Common L2 Issues\n- **Cannot log in**: Check IdP account status first. Then verify Fingen sync: GET /api/users/{id}. Check status = ACTIVE.\n- **Missing module access**: Compare user's role against the permission matrix. Raise an access change request if a role upgrade is needed.\n- **Role mismatch after IdP update**: Force resync: POST /api/users/sync with force: true.\n\n## Diagnostic Query\n```sql\nSELECT id, name, email, role, status, last_login\nFROM users WHERE email = 'client@example.com';\n```",
+          "dependencies": [
+            1
+          ],
+          "sample_question": "What is the first step an L2 engineer should take when a user reports they cannot log in to Fingen?",
+          "sample_answer": "Check the user account status in the identity provider. Confirm whether the account is active, locked, or disabled. Then check the Fingen user sync status via GET /api/users/{id} to verify the account exists and has the correct role assigned.",
+          "scenario_context": "A client operator reports they can log in but cannot access the Transaction module. Their Fingen role shows as 'Viewer'. What is the most likely cause?",
+          "scenario_options": [
+            "Their browser cache needs clearing",
+            "The Transaction module may not be included in the Viewer role's permission set; verify it and raise an access change request if needed",
+            "The Production environment is down",
+            "The operator is using the wrong URL"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "RBAC defines which modules each role can access. Viewer is a read only role and may not include Transaction module access. Check the permission matrix before escalating.",
+          "runbook_ids": [
+            8,
+            11
+          ]
+        },
+        {
+          "id": 3,
+          "path_id": 1,
+          "slug": "account-module",
+          "title": "Account Module",
+          "description": "Account types, lifecycle states, and status codes in Fingen.",
+          "content": "## Overview\nThe Account Module manages the full lifecycle of client accounts, from KYC and activation through to closure. Most transaction failures trace back to an account status issue.\n\n## Account Statuses\n- **PND**: Pending: KYC not yet complete; transactions blocked\n- **ACT**: Active: fully operational\n- **SUS**: Suspended: compliance or fraud hold; transactions blocked\n- **CLO**: Closed: archived; all transactions rejected\n- **REV**: Under Review: flagged for compliance investigation\n\n## Account Types\n- **CURRENT**: Standard operating account supporting debits and credits\n- **SETTLEMENT**: Internal settlement account used by the Transaction Engine\n- **VIRTUAL**: Subaccount linked to a parent; inherits parent limits unless overridden\n\n## KYC Activation\nNew accounts start in PND. KYC documents are uploaded via the Web Portal. Once compliance approves, the account transitions to ACT automatically. If stuck in PND beyond 5 business days:\n\n```sql\nSELECT * FROM kyc_checks WHERE account_id = ? ORDER BY created_at DESC;\n```\n\n## Common L2 Diagnostics\n```sql\n-- Check account status and compliance hold\nSELECT status, compliance_hold, daily_limit FROM accounts WHERE account_number = 'ACC-XXXXXX';\n\n-- Find who triggered a status change\nSELECT ts, actor_type, action, old_value, new_value\nFROM audit_log WHERE entity_type = 'ACCOUNT' AND entity_id = ?\nORDER BY ts DESC LIMIT 5;\n```",
+          "dependencies": [
+            1
+          ],
+          "sample_question": "A client reports that their account is unexpectedly in SUS status. What steps would you take to investigate?",
+          "sample_answer": "Query the account via GET /api/accounts/{id} to confirm the status. Check the audit log for the suspension event to identify who or what triggered it. Escalate to the Account Operations team if the cause is unclear.",
+          "scenario_context": "A client's Current account is in SUS status. The audit log shows the status changed at 02:14 UTC during a scheduled compliance run. The client says they made no unusual transactions. What is your next action?",
+          "scenario_options": [
+            "Immediately reactivate the account to unblock the client",
+            "Ask the client to submit a formal complaint",
+            "Check which compliance rule triggered the suspension and escalate to the Account Operations team for review",
+            "Close the account and open a new one"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "Compliance triggered suspensions must be reviewed by Account Operations before any reactivation. Bypassing this process would be a compliance violation.",
+          "runbook_ids": [
+            7,
+            9
+          ]
+        },
+        {
+          "id": 4,
+          "path_id": 1,
+          "slug": "transaction-engine",
+          "title": "Transaction Engine",
+          "description": "Transaction types, processing pipeline, and status transitions.",
+          "content": "## Overview\nThe Transaction Engine processes every payment through a defined lifecycle. Understanding each status and transition rule lets you pinpoint exactly where a stuck transaction is blocked.\n\n## Transaction Lifecycle\n```\nINITIATED → VALIDATED → AUTHORISED → PROCESSING → SETTLED\n                ↓               ↓           ↓\n           REJECTED        DECLINED     FAILED\n```\n\n## Status Definitions\n- **INITIATED**: Received, not yet validated\n- **VALIDATED**: Passed field/format checks; queued for authorisation\n- **AUTHORISED**: Passed balance and limit checks\n- **PROCESSING**: Sent to settlement engine; awaiting confirmation\n- **SETTLED**: Final; funds moved successfully\n- **REJECTED**: Failed validation (bad data, duplicate)\n- **DECLINED**: Failed authorisation (insufficient funds, limit exceeded)\n- **FAILED**: Error during settlement or downstream system fault\n\n## Key Diagnostic Queries\n```sql\n-- Current status and detail\nSELECT txn_id, account_id, amount, currency, status, error_code, created_at, updated_at\nFROM transactions WHERE txn_id = 'TXN-XXXXXX';\n\n-- Full status history\nSELECT status, changed_at, changed_by, reason\nFROM txn_status_log WHERE txn_id = 'TXN-XXXXXX' ORDER BY changed_at ASC;\n```\n\n## Common Stuck Transaction Causes\n- Stuck in **PROCESSING** > 2 hrs: Settlement batch may have failed; check the batch_runs table\n- Stuck in **AUTHORISED**: Transaction Service queue backlog; check the service logs\n- Unexpected **FAILED**: Check txn_error_log for error_code and error_detail",
+          "dependencies": [
+            3
+          ],
+          "sample_question": "A transaction is stuck in PROCESSING status for over 30 minutes. What is your first action?",
+          "sample_answer": "Check the transaction audit log to identify the last processing step completed. Determine if the issue is in authorisation, balance validation, or the downstream settlement service. Raise a P2 incident if the settlement service is unavailable.",
+          "scenario_context": "Transaction TXN-8821 has been in PROCESSING status for 45 minutes. The Authorisation Service health check is passing. What should you check next?",
+          "scenario_options": [
+            "Wait another 30 minutes, as transactions can take up to 2 hours",
+            "Manually update the transaction status to COMPLETED in the database",
+            "Check the settlement service health endpoint and review the transaction audit log for the last completed step",
+            "Reject the transaction and ask the client to resubmit"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "If Auth is healthy but the transaction is stuck, the bottleneck is likely downstream (settlement or GL). Reviewing the audit log pinpoints exactly where processing stalled.",
+          "runbook_ids": [
+            1,
+            3
+          ]
+        },
+        {
+          "id": 5,
+          "path_id": 1,
+          "slug": "reporting-suite",
+          "title": "Reporting Suite",
+          "description": "Standard reports, scheduled delivery, and report parameter configuration.",
+          "content": "## Overview\nThe Reporting Suite generates scheduled and on demand reports delivered to clients via SFTP, email, or API webhook. Report delivery failures are a frequent source of client complaints.\n\n## Report Types\n- **Transaction Summary**: Daily/weekly aggregation of all transactions by status\n- **Settlement Confirmation**: Post settlement confirmation with net positions per currency\n- **Reconciliation Report**: Breaks and matched items for a given date range\n- **Audit Export**: Compliance grade export of all user actions and data changes\n- **Custom Client Report**: Client specific format negotiated at onboarding\n\n## Delivery Methods\n- **SFTP**: Config: delivery_config.sftp_host / sftp_user. Fails: credential expiry, host key mismatch\n- **Email**: Config: delivery_config.email_recipients. Fails: spam filter, invalid address\n- **API Push (Webhook)**: Config: delivery_config.webhook_url. Fails: 4xx/5xx from client endpoint\n- **Portal Download**: No delivery failure possible; access issues only\n\n## Report Lifecycle\n```\nSCHEDULED → GENERATING → GENERATED → DELIVERING → DELIVERED\n                              ↓              ↓\n                         GEN_FAILED    DELIVERY_FAILED\n```\n\n## Diagnostic Query\n```sql\nSELECT report_id, report_type, scheduled_date, status, delivery_method, error_detail\nFROM reports\nWHERE status IN ('GEN_FAILED','DELIVERY_FAILED')\nAND scheduled_date >= CURRENT_DATE - 7;\n```\n\n## L2 Action for DELIVERY_FAILED\n1. Confirm the report was generated (status = GENERATED)\n2. Check delivery_config for the account\n3. For SFTP: test connectivity, check for expired credentials\n4. Retry: POST /api/reports/{report_id}/retry",
+          "dependencies": [
+            3,
+            4
+          ],
+          "sample_question": "A client says their Daily Transaction Summary report did not arrive this morning. How would you investigate?",
+          "sample_answer": "Check the REPORT_RUN table for the scheduled run. If FAILED, review the error description. Check the delivery destination configuration. If the run succeeded, investigate the delivery mechanism separately.",
+          "scenario_context": "The client's Daily Transaction Summary shows FAILED in REPORT_RUN with error 'SFTP_AUTH_FAILURE'. What is your immediate action?",
+          "scenario_options": [
+            "Rerun the report immediately without investigating",
+            "Check and update the SFTP delivery credentials in the report configuration, because expired or incorrect credentials cause SFTP_AUTH_FAILURE",
+            "Escalate to L3 engineering immediately",
+            "Notify the client the report will be 24 hours late"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "SFTP_AUTH_FAILURE is a credential error. Verify the SFTP username, password, and key are current before rerunning the report. Otherwise it will fail again.",
+          "runbook_ids": [
+            12,
+            15,
+            13
+          ]
+        },
+        {
+          "id": 6,
+          "path_id": 1,
+          "slug": "integration-layer",
+          "title": "Integration Layer",
+          "description": "Third party integrations, webhook events, and API gateway usage.",
+          "content": "## Overview\nThe Integration Layer connects Fingen to external systems. Client applications call in via the API Gateway, and Fingen pushes data out via webhooks and file exports. Integration failures can silently stop data flowing without a visible error.\n\n## Inbound Integrations\n- **REST API**: Client systems authenticate with X-API-Key header; all endpoints versioned under /api/v1/\n- **File Upload (SFTP)**: Bulk payment and reference data files dropped to client specific SFTP directories\n- **CBS Feed**: Automated inbound data from the client's Core Banking System every 15 minutes\n\n## Outbound Integrations\n- **Webhooks**: Event driven push to client HTTP endpoints for transaction status changes, report delivery, account events\n- **SFTP Report Delivery**: Scheduled report files pushed to client SFTP\n- **Downstream API Calls**: Calls to external clearing and settlement networks\n\n## Webhook Event Types\nTXN_STATUS_CHANGE | REPORT_DELIVERED | ACCOUNT_STATUS_CHANGE | BATCH_COMPLETE | SETTLEMENT_CONFIRMED\n\n## Common L2 Issues\n- **Webhooks not received**: Check webhook_delivery_log for HTTP status codes. 4xx usually means client endpoint config error; 5xx means client server error.\n- **API key rejected**: Check api_keys table for expiry date and is_active flag\n- **CBS feed stale**: Check data_ingestion_log for feed job status; stale > 1 hour triggers HIGH alert\n\n## Webhook Retry Logic\nRetries with exponential backoff: 1min → 5min → 15min → 1hr → 4hr. After max retries: status = ABANDONED. Manual retry: POST /api/integrations/webhooks/{event_id}/retry",
+          "dependencies": [
+            1
+          ],
+          "sample_question": "A downstream system reports it has stopped receiving webhook events from Fingen. What would you check?",
+          "sample_answer": "Open the Gateway Console and filter for the downstream system's webhook endpoint. Check the delivery log for recent failures and HTTP response codes. Verify the endpoint URL is correct and the receiving system's firewall hasn't blocked Fingen's IP range.",
+          "scenario_context": "The Gateway Console shows all webhook deliveries to the client's CBS are returning HTTP 403. All 3 retries are failing. What does this indicate?",
+          "scenario_options": [
+            "The Fingen Integration Gateway is down",
+            "HTTP 403 (Forbidden) means the CBS endpoint is rejecting the requests, most likely because of an expired API key or token; check the integration authentication configuration",
+            "The CBS endpoint URL has changed, so update the DNS",
+            "Disable webhooks to CBS until it resolves itself"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "HTTP 403 is an authorisation failure at the receiving end, not a network issue. The CBS is reachable but rejecting Fingen's credentials. Check the API key or token expiry.",
+          "runbook_ids": [
+            17,
+            19,
+            20
+          ]
+        },
+        {
+          "id": 7,
+          "path_id": 1,
+          "slug": "data-dictionary",
+          "title": "Data Dictionary",
+          "description": "Core data entities, field definitions, code tables, and naming conventions.",
+          "content": "## Overview\nThe Data Dictionary defines every key table and column in Fingen. L2 engineers need to know where data lives to run accurate triage queries.\n\n## Core Tables Reference\n| Table | Purpose |\n|---|---|\n| users | Fingen user accounts, roles, IdP sync status |\n| accounts | Client accounts: status, type, limits |\n| transactions | Every payment record with current status |\n| txn_status_log | Immutable status transition history |\n| batch_runs | Scheduled and ad hoc batch job records |\n| reports | Report generation and delivery records |\n| delivery_config | Per account delivery method configuration |\n| webhook_delivery_log | All outbound webhook attempts and responses |\n| audit_log | Immutable record of all user and system actions |\n| kyc_checks | KYC document submission and approval status |\n| config_params | Runtime config key value pairs per environment |\n| data_ingestion_log | CBS and external feed ingestion job results |\n| exception_queue | Payments requiring manual review |\n| recon_breaks | Open reconciliation discrepancies |\n\n## Key Relationships\n- transactions.account_id → accounts.id\n- txn_status_log.txn_id → transactions.txn_id\n- reports.account_id → accounts.id\n- audit_log.entity_id → any entity (check entity_type column)\n\n## Read Only Reminder\nL2 engineers have SELECT only access in Production. Any data modification requires an approved Change Request executed by L3 with DBA oversight. Never attempt UPDATE or DELETE on Production tables.",
+          "dependencies": [
+            3,
+            4
+          ],
+          "sample_question": "You receive an API response with account_status: 'PND'. What does this mean and what action is typically required?",
+          "sample_answer": "PND means Pending: the account is created but not yet fully activated. KYC verification or initial funding is still outstanding. The client needs to complete activation steps.",
+          "scenario_context": "An API response returns 'acct_status': 'CLO' for an account the client believes is active. How do you interpret this and what do you do next?",
+          "scenario_options": [
+            "The field name is incorrect, so ignore it and look elsewhere",
+            "CLO is an internal code that does not affect the client facing status",
+            "CLO means Closed per the Data Dictionary; verify in the audit log when and why the account was closed",
+            "The API must have a bug, so escalate to L3 immediately"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "CLO = Closed is defined in the ACCOUNT_STATUS code table. The audit log will show the closure event, actor, and timestamp to determine whether this was intentional.",
+          "runbook_ids": []
+        },
+        {
+          "id": 8,
+          "path_id": 1,
+          "slug": "configuration-management",
+          "title": "Configuration Management",
+          "description": "Environment configuration, feature flags, and system parameters.",
+          "content": "## Overview\nThe Config Service manages runtime parameters controlling Fingen's behaviour: transaction limits, batch schedules, feature flags, and integration endpoints. Misconfiguration is a common root cause of limit related failures.\n\n## Configuration Scopes\n- **Global**: Applies to all accounts unless overridden (e.g. default daily limit)\n- **Account level**: Per account overrides (e.g. higher limit for a premium client)\n- **Environment level**: Separate values for Dev / UAT / Production\n\n## Key Parameters for L2\n| Parameter | Description |\n|---|---|\n| txn.daily_limit.default | Default daily transaction limit |\n| txn.velocity.max_count_per_hour | Max transactions/hour before VELOCITY_BREACH |\n| batch.settlement.cutoff_time | Daily settlement cutoff time (HH:MM UTC) |\n| report.sftp.retry_attempts | SFTP delivery retry count |\n| webhook.max_retries | Max webhook delivery attempts |\n| dedup.window_seconds | Transaction dedup window (default: 60) |\n\n## Retrieving Config\n```\nGET /api/config/{scope}/{key}\nGET /api/config/account/{account_id}/{key}\n```\n\n## Diagnostic Query\n```sql\n-- Check account-level override for daily limit\nSELECT value FROM config_params\nWHERE scope = 'account' AND account_id = ? AND key = 'txn.daily_limit';\n```\n\n## Config Cache\nThe Config Service caches values for 5 minutes. After a config change, wait 5 minutes or call POST /api/config/cache/invalidate (requires Admin role) to force immediate refresh.",
+          "dependencies": [
+            1
+          ],
+          "sample_question": "A transaction limit for a client appears lower than agreed. Where would you check to verify the configured limit?",
+          "sample_answer": "Use the Config Service read endpoint to retrieve the current transaction limit parameter for the relevant account type. Compare against the agreed limit in the client configuration document. Raise a Change Request if there is a discrepancy.",
+          "scenario_context": "A client urgently needs their daily debit limit increased from £50,000 to £100,000 in Production before 09:00 tomorrow. What is the correct process?",
+          "scenario_options": [
+            "Make the change directly in the Config Service to avoid delays",
+            "Raise a Standard Change Request and wait for the next CAB meeting in 3 days",
+            "Raise an Emergency Change Request, obtain verbal CAB approval, implement, and document everything same day",
+            "Ask an L3 engineer to make the change informally"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "Urgent Production config changes use the Emergency CR path: verbal CAB approval first, then change, then same day documentation. Bypassing change management is a compliance violation.",
+          "runbook_ids": [
+            10
+          ]
+        },
+        {
+          "id": 9,
+          "path_id": 1,
+          "slug": "audit-trail",
+          "title": "Audit Trail & Compliance",
+          "description": "Audit logging, compliance checks, and regulatory report generation.",
+          "content": "## Overview\nEvery action in Fingen, whether by users, operators, or automated services, is written to the immutable audit log. For L2 engineers, the audit log is the primary source of truth for \"who did what and when.\"\n\n## What Is Logged\n- User login and logout events\n- Account status changes (who triggered it and the reason)\n- Transaction state transitions (system generated)\n- Configuration changes (key, old value, new value, changed by)\n- Report generation and delivery attempts\n- API key creation and revocation\n- All Admin Panel actions\n\n## Audit Log Query\n```sql\nSELECT event_id, ts, actor_type, actor_id, action,\n       entity_type, entity_id, old_value, new_value, ip_address\nFROM audit_log\nWHERE entity_id = 'ACC-001234'\nORDER BY ts DESC LIMIT 20;\n```\nactor_type is USER (human action) or SYSTEM (automated process).\n\n## Compliance Requirements\n- Audit logs are retained for **7 years** under financial services regulations\n- Never attempt to delete or alter audit log records\n- For client audit export requests: use the Audit Export report type and never provide raw database exports\n\n## Common L2 Use Cases\n- **Unexpected account suspension**: Search for action = 'STATUS_CHANGE' with entity_id = account_id\n- **Prove a transaction was submitted**: Search action = 'TXN_CREATED' with entity_id = txn_id\n- **Identify who changed a config value**: Search action = 'CONFIG_CHANGE' with entity_type = 'CONFIG'\n- **Check if a user logged in during a suspicious window**: Search by actor_id = user_id across the date range",
+          "dependencies": [
+            3,
+            4
+          ],
+          "sample_question": "How would you use the audit trail to confirm whether a specific user modified an account record yesterday?",
+          "sample_answer": "Query AUDIT_EVENT filtering by resource_type=ACCOUNT, resource_id={account_id}, and timestamp within yesterday's date range. Filter by the suspected user's actor_id. Review event_type and before/after values.",
+          "scenario_context": "You suspect a user modified a client account record at approximately 14:30 yesterday without authorisation. Where do you start the investigation?",
+          "scenario_options": [
+            "Call the user directly and ask them",
+            "Query AUDIT_EVENT filtered by resource_type=ACCOUNT, the account's resource_id, timestamp 14:00 to 15:00 yesterday, and the suspected actor_id",
+            "Run a full database backup and search it",
+            "Check the users table for recent logins"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "AUDIT_EVENT is the authoritative, tamper evident record for all data changes. Filtering by resource, time, and actor gives a precise answer without invasive actions.",
+          "runbook_ids": [
+            11
+          ]
+        },
+        {
+          "id": 10,
+          "path_id": 1,
+          "slug": "platform-health-monitoring",
+          "title": "Platform Health & Monitoring",
+          "description": "Health endpoints, operational dashboards, key metrics, and alert thresholds.",
+          "content": "## Overview\nPlatform Health monitoring is the L2 engineer's early warning system. Knowing which dashboards to check, which metrics matter, and which alert thresholds require escalation enables fast incident response.\n\n## Operations Dashboard Panels\n- **Service Health**: RED/AMBER/GREEN per microservice with current error rate %\n- **Transaction Throughput**: Real time TPS vs baseline (alert if > 50% below baseline)\n- **Settlement Queue Depth**: Transactions queued for settlement; spikes indicate batch delays\n- **Report Delivery Rate**: % of scheduled reports delivered on time today\n- **Integration Health**: Inbound API error rate and outbound webhook delivery rate\n- **Alert Feed**: Active and recently resolved alerts with timestamps\n\n## Key SLA Metrics\n| Metric | SLA Threshold |\n|---|---|\n| Transaction processing P95 | < 3 seconds |\n| Settlement batch completion | Within 2 hours of cutoff |\n| Scheduled report delivery | Within 30 minutes of scheduled time |\n| Platform API availability | 99.9% monthly uptime |\n\n## Alert Severity Mapping\n- **CRITICAL** → P1 incident immediately; wake on call engineer\n- **HIGH** → P2; investigate within 30 minutes\n- **MEDIUM** → Investigate within 4 hours\n- **LOW** → Review during business hours\n\n## Monitoring Tools for L2\n- **Operations Dashboard** (Grafana based, read only): primary health view\n- **PagerDuty**: on call alert routing and acknowledgement\n- **Kibana** (index: fingen-prod-*): log search and error investigation",
+          "dependencies": [
+            1,
+            4,
+            6
+          ],
+          "sample_question": "The Operations Dashboard shows transaction FAILED rate at 5%. What are your immediate steps?",
+          "sample_answer": "Acknowledge the PagerDuty alert. Check the error log for the most common failure reason code. Determine if failures are isolated to a specific type or integration endpoint. Raise a P2 incident if the cause cannot be identified within 15 minutes.",
+          "scenario_context": "The Operations Dashboard shows API p95 latency at 1,200ms (threshold: 800ms). Transactions are completing successfully but slowly. How do you classify this?",
+          "scenario_options": [
+            "No action, as latency is below the outage threshold",
+            "P1, because the platform is down",
+            "P2: major feature degradation; check infrastructure metrics and engage on call engineering",
+            "P4: low priority, address it the next business day"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "Latency above threshold with successful processing is degradation, not an outage, so it is P2. P1 requires platform wide failure. Checking infra metrics will reveal whether it's a DB, network, or service bottleneck.",
+          "runbook_ids": [
+            14,
+            21
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "transaction-flows",
+      "title": "Transaction & Data Flows",
+      "description": "End to end transaction processing, settlement cycles, reconciliation, and downstream delivery.",
+      "nodes": [
+        {
+          "id": 11,
+          "path_id": 2,
+          "slug": "payment-initiation",
+          "title": "Payment Initiation",
+          "description": "How payments enter Fingen, channel types, and initial validation rules.",
+          "content": "## Overview\nPayment initiation is the entry point for all transactions in Fingen. Every payment, whether from the web portal, a client API call, or a bulk file, passes through the same intake and validation pipeline before entering the processing queue.\n\n## Initiation Channels\n- **REST API**: Programmatic / real time single payments via POST /api/payments\n- **Web Portal**: Manual entry by operators for individual payments\n- **File Upload**: Bulk payment batches via CSV or JSON (SFTP or Portal upload)\n\n## Validation Rules (applied to all channels)\n1. **Field presence**: Mandatory fields: account_id, amount, currency, payment_ref\n2. **Format validation**: Currency must be valid ISO 4217; amount must be numeric and positive\n3. **Deduplication**: payment_ref checked against the last 60 seconds (configurable); duplicate → DUPLICATE_TXN\n4. **Account existence**: Originating and beneficiary accounts must exist in ACT status\n\n## Rejection Codes\n| Code | Cause |\n|---|---|\n| INVALID_ACCOUNT | Account not found or not in ACT status |\n| DUPLICATE_TXN | Same payment_ref within dedup window |\n| INVALID_CURRENCY | Currency code not supported |\n| MISSING_FIELD | Mandatory field absent |\n| LIMIT_EXCEEDED | Exceeds single transaction config limit |\n\n## File Upload Investigation\n```sql\nSELECT file_id, filename, submitted_at, total_records,\n       accepted, rejected, error_summary\nFROM file_upload_log WHERE account_id = ?\nORDER BY submitted_at DESC LIMIT 5;\n```",
+          "dependencies": [],
+          "sample_question": "A client reports that a bulk payment file was uploaded but no transactions appeared in the system. What do you investigate?",
+          "sample_answer": "Check the File Upload processing log for the submitted file. Review the validation errors. Common causes are malformed CSV headers, invalid account numbers, or amounts exceeding daily limits. Extract the error_code for each rejected record and share with the client.",
+          "scenario_context": "A client uploads a bulk payment file with 500 records. 23 records are rejected with DUPLICATE_TXN. The client insists all 500 are new, unique payments. What is the most likely explanation?",
+          "scenario_options": [
+            "Override the duplicate check, because the client is always right",
+            "The client probably submitted the same file twice within 60 seconds and the deduplication window caught the repeats; verify with the client and resubmit unique records only",
+            "The Fingen database has a corruption issue",
+            "Raise a P1 incident immediately"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "DUPLICATE_TXN within the 60 second deduplication window almost always indicates a double submission. Verify the submission timestamp log and coordinate with the client to confirm before resubmitting.",
+          "runbook_ids": [
+            6,
+            1
+          ]
+        },
+        {
+          "id": 12,
+          "path_id": 2,
+          "slug": "authorisation-limits",
+          "title": "Authorisation & Limits",
+          "description": "Authorisation checks, credit and debit limits, and decline code interpretation.",
+          "content": "## Overview\nAfter validation, each payment enters the Authorisation Service which checks financial limits, balances, and velocity controls before allowing the payment to proceed to settlement.\n\n## Authorisation Checks (in order)\n1. Account status: originating account must be ACT with no compliance hold\n2. Balance check (debits): available balance >= payment amount\n3. Credit limit check (credit products): outstanding + payment <= credit limit\n4. Single transaction limit: amount <= txn.single_limit config value\n5. Daily limit: sum of today's AUTHORISED + PROCESSING + SETTLED + this payment <= daily limit\n6. Velocity control: transaction count and amount within configured rolling window\n\n## Decline Codes\n| Code | Meaning | L2 Action |\n|---|---|---|\n| INSUFFICIENT_FUNDS | Balance too low | Advise client to fund account |\n| DAILY_LIMIT_EXCEEDED | Daily limit reached | Check if earlier transactions are still in PROCESSING counting against limit |\n| VELOCITY_BREACH | Too many transactions in rolling window | Check velocity config; wait for window to reset |\n| ACCOUNT_SUSPENDED | Account in SUS or REV status | Investigate suspension cause first |\n\n## Diagnostic Queries\n```sql\n-- Check today's usage vs limit\nSELECT SUM(amount) as today_total, COUNT(*) as today_count\nFROM transactions\nWHERE account_id = ? AND DATE(created_at) = CURRENT_DATE\nAND status IN ('AUTHORISED','PROCESSING','SETTLED');\n\n-- Velocity: last 1 hour\nSELECT COUNT(*) as count_1hr, SUM(amount) as amount_1hr\nFROM transactions\nWHERE account_id = ? AND created_at >= DATETIME('now', '-1 hour')\nAND status NOT IN ('REJECTED','DECLINED');\n```",
+          "dependencies": [
+            11
+          ],
+          "sample_question": "A client receives DAILY_LIMIT_EXCEEDED on what they claim is their first transaction today. How do you investigate?",
+          "sample_answer": "Query the transaction history for today to confirm whether earlier transactions have already processed. Check if the limit is set at the account or product level. Verify the configured limit via the Config Service. Check if a prior transaction is still in PROCESSING and being counted against today's limit.",
+          "scenario_context": "A client's DEBIT payment is declined with VELOCITY_BREACH. The client says they have only made 5 transactions today. What is the most likely explanation?",
+          "scenario_options": [
+            "The client is wrong, because velocity controls only count transactions above £10,000",
+            "Velocity controls can be configured to trigger on transaction count, total amount, or frequency within a rolling time window, so the limit may apply across a shorter window than a full day",
+            "Manually approve the transaction to unblock the client",
+            "The Authorisation Service has a bug, so escalate to L3"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "Velocity controls are highly configurable: they can trigger on count per hour, total amount per day, or frequency within a rolling window. The client's 5 daily transactions may still breach an hourly or amount based velocity rule.",
+          "runbook_ids": [
+            10
+          ]
+        },
+        {
+          "id": 13,
+          "path_id": 2,
+          "slug": "settlement-processing",
+          "title": "Settlement Processing",
+          "description": "Settlement cycles, netting, cutoff times, and settlement account management.",
+          "content": "## Overview\nSettlement is the process of moving funds between accounts after authorisation. Fingen runs settlement in scheduled batch cycles and in real time for priority payments. Settlement failures hold funds and can trigger client SLA breaches.\n\n## Settlement Types\n- **Batch Settlement**: Runs at configured cutoff times (default: 11:00 and 17:00 UTC). Processes all AUTHORISED transactions since the previous cutoff.\n- **Real time Settlement**: For payments flagged priority: high. Processed immediately after authorisation.\n\n## Settlement Cycle\n```\nAUTHORISED → [cut-off reached] → PROCESSING → [clearing confirms] → SETTLED\n                                      ↓\n                                    FAILED (see txn_error_log)\n```\n\n## Batch Monitoring Query\n```sql\nSELECT batch_id, batch_type, scheduled_time, start_time, end_time,\n       status, total_txns, settled_txns, failed_txns\nFROM batch_runs\nWHERE batch_type = 'SETTLEMENT' AND DATE(scheduled_time) = CURRENT_DATE\nORDER BY scheduled_time;\n```\n\n## Common Settlement Issues\n- **Batch not started at scheduled time**: Check if previous batch is still RUNNING (stuck > 30 min past schedule → escalate L3)\n- **High FAILED count**: Pull txn_error_log for batch ID. CLEARING_TIMEOUT and NETWORK_UNAVAILABLE = external network issue → L3\n- **Transaction stuck in PROCESSING > 2 hrs**: Likely missed the batch. Check batch completed without picking it up → escalate\n\n## Escalation Triggers\nEscalate to L3 if: batch fails to start, > 10% of transactions FAIL in a single batch, or SYSTEM_ERROR appears in the batch error log.",
+          "dependencies": [
+            12
+          ],
+          "sample_question": "A client submitted a payment at 15:45 UTC and it has not settled. When should it settle and why?",
+          "sample_answer": "The 16:00 UTC batch cutoff is at 15:30 UTC. Since the payment was submitted at 15:45, it missed the 16:00 batch and will be included in the 22:00 UTC batch.",
+          "scenario_context": "A client submits a payment at 21:55 UTC. They call at 23:30 UTC saying the recipient has not received funds. What do you tell them?",
+          "scenario_options": [
+            "The payment was rejected, so ask the client to resubmit tomorrow",
+            "The 22:00 UTC batch cutoff was at 21:30 UTC, so the payment missed it and will be processed in the next available settlement window (12:00 UTC tomorrow)",
+            "Manually trigger settlement for this one payment",
+            "Mark the transaction as SETTLED immediately"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "21:55 UTC is after the 21:30 cutoff (30 min before the 22:00 batch). The payment is valid and queued for the next batch. Inform the client of the expected settlement time.",
+          "runbook_ids": [
+            2
+          ]
+        },
+        {
+          "id": 14,
+          "path_id": 2,
+          "slug": "reconciliation-workflow",
+          "title": "Reconciliation Workflow",
+          "description": "Daily reconciliation process, break identification, and resolution procedures.",
+          "content": "## Overview\nReconciliation ensures Fingen's internal records match clearing network and Core Banking System records. Reconciliation breaks can indicate missing funds or data integrity problems, and they are among the highest priority issues in financial operations.\n\n## Reconciliation Types\n- **Internal Recon**: transactions table vs txn_status_log; continuous (real time)\n- **Settlement Recon**: Fingen settled records vs clearing network confirmation file; daily post settlement\n- **GL Recon**: Transaction amounts vs General Ledger postings; daily EOD\n- **Client Recon**: Fingen records vs client's own records; on request\n\n## Break Categories\n| Break Type | Meaning |\n|---|---|\n| MISSING_INBOUND | Clearing network shows a receipt; Fingen has no record |\n| MISSING_OUTBOUND | Fingen shows SETTLED; clearing network has no record |\n| AMOUNT_MISMATCH | Both sides have the record but amounts differ |\n| STATUS_MISMATCH | Status differs between Fingen and clearing network |\n\n## Diagnostic Query\n```sql\nSELECT break_id, break_type, txn_id, fingen_amount,\n       external_amount, detected_at, assigned_to\nFROM recon_breaks\nWHERE status = 'OPEN' AND detected_at >= CURRENT_DATE - 3\nORDER BY detected_at DESC;\n```\n\n## L2 Action on a Break\n1. Verify it is not a timing issue (transactions near cutoff appear as breaks temporarily, so wait 30 min before acting)\n2. Pull the clearing network reference from the recon_breaks record\n3. If genuine: raise a P2 incident; escalate to Finance Operations and L3\n4. Never manually adjust transaction amounts; that requires a formal journal entry via Finance Ops",
+          "dependencies": [
+            13
+          ],
+          "sample_question": "The reconciliation report shows a MISSING_OUTBOUND break for a transaction. What does this mean and what do you do?",
+          "sample_answer": "MISSING_OUTBOUND means Fingen has a record of sending the transaction but the Payment Network has not confirmed settlement. Check the Integration Gateway log for the outbound instruction and the network portal. Escalate to Settlements if the network shows no record.",
+          "scenario_context": "The overnight reconciliation report shows an AMOUNT_MISMATCH: Fingen records £12,500 settled but the Payment Network confirms £12,050. What is your action?",
+          "scenario_options": [
+            "Update the Fingen transaction amount to match the network figure immediately",
+            "Mark the break as resolved, because small discrepancies are normal",
+            "Investigate both records: check the transaction audit log in Fingen and the Payment Network portal for the same reference, then escalate to the Settlements team",
+            "Raise a P4 ticket and address it next week"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "AMOUNT_MISMATCH requires cross system investigation before any adjustment. Do not modify amounts without Settlements team authorisation. This could be a fee calculation error, partial payment, or a network rounding issue.",
+          "runbook_ids": [
+            4
+          ]
+        },
+        {
+          "id": 15,
+          "path_id": 2,
+          "slug": "gl-posting",
+          "title": "GL Posting",
+          "description": "General ledger integration, posting rules, and double entry accounting principles.",
+          "content": "## Overview\nGL (General Ledger) Posting translates every settled financial transaction into accounting double entry records that feed the bank's core accounting system. A GL posting error means the transaction processed in Fingen but the accounting entry was not created, which is a serious compliance gap.\n\n## How GL Posting Works\nAfter a transaction reaches SETTLED status, the GL Posting Service creates two journal entries:\n- **Debit entry**: Reduces the originating account balance in the GL\n- **Credit entry**: Increases the beneficiary account balance in the GL\n\nBoth entries are sent to CBS via the Integration Gateway. CBS acknowledges and entries are marked GL_POSTED.\n\n## GL Error Codes\n| Code | Cause | Action |\n|---|---|---|\n| GL_POSTING_ERROR | CBS rejected the entry (schema mismatch, invalid GL code) | Pull CBS error detail; raise with Finance Operations |\n| CBS_TIMEOUT | CBS did not respond within timeout | Automated retry; if 3rd retry fails → P2 incident |\n| INVALID_GL_CODE | Account GL code mapping missing or incorrect | Config fix by Finance Ops |\n| DUPLICATE_GL_ENTRY | Retry posted same entry twice | Confirm with Finance Ops before any action |\n\n## Diagnostic Query\n```sql\n-- Transactions settled but not GL posted\nSELECT txn_id, account_id, amount, settled_at, gl_status, gl_error_code\nFROM transactions\nWHERE status = 'SETTLED' AND gl_status != 'GL_POSTED'\nAND settled_at >= DATETIME('now', '-24 hours');\n```\n\n## Critical Escalation Rule\nGL errors must be escalated to Finance Operations within 1 hour of detection, because they affect the bank's balance sheet. Do not retry GL posting without Finance Ops approval.",
+          "dependencies": [
+            13
+          ],
+          "sample_question": "Several transactions completed successfully but the client's accounting team reports GL entries are missing. What do you check?",
+          "sample_answer": "Query GL_POSTING_ERROR for the relevant transaction IDs and date. Review the error reason. Check the GL system health endpoint. If the GL was temporarily unavailable, transactions may need to be reposted manually via Finance Operations.",
+          "scenario_context": "Five transactions for a new account type that went live today show GL_POSTING_ERROR with 'ACCOUNT_MAPPING_NOT_FOUND'. What is the likely cause and correct action?",
+          "scenario_options": [
+            "Delete the transactions and ask the client to resubmit tomorrow",
+            "The new account type has no GL posting rule configured; raise a Change Request to add the mapping, then repost the affected transactions through Finance Operations",
+            "Modify the GL mapping directly in the production database",
+            "Escalate to the client's accounting team to fix their GL system"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "New account types need GL posting rules added via the approved change process. Once the mapping CR is approved and applied, Finance Operations can repost the failed transactions.",
+          "runbook_ids": [
+            5
+          ]
+        },
+        {
+          "id": 16,
+          "path_id": 2,
+          "slug": "batch-processing",
+          "title": "Batch Processing",
+          "description": "Batch job schedules, monitoring, failure detection, and recovery procedures.",
+          "content": "## Overview\nBatch processing handles high volume, time based operations: settlement cycles, report generation, reconciliation, and downstream delivery all run as scheduled batch jobs. L2 engineers need to quickly identify when a batch has failed and assess the downstream impact.\n\n## Batch Job Types\n| Job | Schedule | Purpose |\n|---|---|---|\n| SETTLEMENT | 11:00 and 17:00 UTC | Processes all AUTHORISED transactions |\n| RECON | 02:00 UTC | Daily reconciliation against clearing network |\n| REPORT_GENERATE | Varies per client | Generates scheduled reports |\n| REPORT_DELIVER | 30 min after generation | Delivers reports to client channels |\n| GL_POSTING_SWEEP | 03:00 UTC | Sweeps any missed GL posting entries |\n| CBS_INGEST | Every 15 minutes | Ingests Core Banking System data |\n\n## Batch Status Codes\nSCHEDULED → RUNNING → COMPLETED | PARTIAL_COMPLETE | FAILED\n\n- **PARTIAL_COMPLETE**: Batch finished but some records failed; check failed_txns count\n- **FAILED**: Batch did not complete; downstream jobs may be blocked (REPORT_DELIVER depends on REPORT_GENERATE)\n\n## Diagnostic Query\n```sql\nSELECT batch_type, status, total_txns, completed_txns, failed_txns,\n       ROUND((completed_txns * 100.0 / total_txns), 1) as success_pct,\n       scheduled_time, end_time\nFROM batch_runs\nWHERE DATE(scheduled_time) = CURRENT_DATE\nORDER BY scheduled_time;\n```\n\n## Stuck Batch Protocol\nIf a batch has been RUNNING for > 2× its usual duration: escalate to L3. Never manually kill batch processes, as this can leave data in a partially committed state.",
+          "dependencies": [
+            13
+          ],
+          "sample_question": "The 22:00 UTC settlement batch is showing FAILED status. What is your immediate response?",
+          "sample_answer": "Acknowledge the PagerDuty alert. Check BATCH_RUN for the failure reason. If due to a transient error, follow the settlement batch rerun runbook. If due to a data error or service outage, raise a P1 incident and escalate to Settlements and Engineering immediately.",
+          "scenario_context": "The 22:00 UTC settlement batch shows FAILED in BATCH_RUN with error 'PAYMENT_NETWORK_TIMEOUT'. It is now 22:15 UTC. What is your first action?",
+          "scenario_options": [
+            "Wait until morning to investigate, since settlement can catch up tomorrow",
+            "Acknowledge the PagerDuty alert, check Payment Network status, and follow the settlement batch rerun runbook if the network has recovered",
+            "Manually mark all pending transactions as SETTLED",
+            "Restart the database server"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "PAYMENT_NETWORK_TIMEOUT is transient: it means the network was temporarily unreachable. If the network has recovered, the rerun runbook lets you restart from checkpoint without reprocessing already settled transactions.",
+          "runbook_ids": [
+            14,
+            2
+          ]
+        },
+        {
+          "id": 17,
+          "path_id": 2,
+          "slug": "realtime-vs-batch",
+          "title": "Real time vs Batch Flows",
+          "description": "Operational differences, SLA requirements, and when each processing mode applies.",
+          "content": "## Overview\nNot all operations in Fingen use the same processing model. Understanding when real time vs batch processing is used is essential for setting correct client expectations and diagnosing timing related issues.\n\n## Real time Processing (Synchronous)\nUsed for: single payment authorisation, account status checks, webhook delivery for high priority events\n- Response SLA: < 3 seconds (P95)\n- Failure mode: immediate error response with error_code returned to caller\n- Monitoring: Transaction Service error rate on Operations Dashboard\n\n## Batch Processing (Asynchronous)\nUsed for: settlement cycles, report generation, reconciliation, GL posting, bulk file processing\n- Failure mode: silent failure recorded in batch_runs, with no immediate client facing error\n- Monitoring: Batch Jobs panel and alert feed\n\n## Key Distinctions for L2 Triage\n| Symptom | Likely Processing Type | Investigation Path |\n|---|---|---|\n| Immediate error on payment | Real time validation/auth failure | Check error_code in API response |\n| Payment AUTHORISED but not SETTLED | Batch settlement issue | Check batch_runs for settlement batch |\n| Report not received | Batch generation or delivery issue | Check batch_runs and reports table |\n| All payments normal but GL not updated | GL_POSTING_SWEEP batch issue | Check batch_runs for GL_POSTING_SWEEP |\n\n## Cutoff Time Impact\nPayments submitted after the 17:00 UTC settlement cutoff will not settle until the next day's 11:00 batch. Always check submission timestamp vs cutoff before telling a client their payment \"should have settled today.\" ",
+          "dependencies": [
+            13,
+            16
+          ],
+          "sample_question": "A client asks why their payment authorisation was instant but funds have not appeared in the recipient's account. How do you explain this?",
+          "sample_answer": "Authorisation is real time and confirms the payment is approved and funds reserved. Actual fund delivery depends on the settlement batch, which runs at scheduled intervals. The funds will appear after the next batch cycle completes.",
+          "scenario_context": "A client calls 20 minutes after an approved payment to say the recipient's bank shows no credit. They want to know if the payment went through. How do you explain this?",
+          "scenario_options": [
+            "Tell the client the payment failed and ask them to try again",
+            "Authorisation was real time (instant confirmation) but the actual fund transfer depends on the next scheduled settlement batch. The recipient will receive funds after that batch completes, typically within a few hours",
+            "Escalate to P1, because funds are missing",
+            "Tell the client to wait 48 hours"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "Authorisation and settlement are separate flows. Real time authorisation means approved and reserved, not yet delivered. Settlement is the batch process that moves the funds. This is standard for batch settled payments.",
+          "runbook_ids": [
+            14
+          ]
+        },
+        {
+          "id": 18,
+          "path_id": 2,
+          "slug": "exception-handling",
+          "title": "Exception Handling",
+          "description": "Exception queues, manual override procedures, and escalation triggers.",
+          "content": "## Overview\nThe Exception Queue holds payments that could not be processed automatically due to data issues, authorisation edge cases, or downstream errors. Efficient exception queue management is a core daily task for L2 engineers.\n\n## Exception Types\n| Type | Cause |\n|---|---|\n| VALIDATION_EXCEPTION | Passed intake but failed deeper validation (e.g. account closed after submission) |\n| SYSTEM_EXCEPTION | Infrastructure error during processing (e.g. DB timeout, CBS unavailable) |\n| AUTHORISATION_EXCEPTION | Authorisation rule triggered requiring manual review |\n| DUPLICATE_EXCEPTION | Suspected duplicate requiring human confirmation |\n\n## Exception Queue Workflow\n1. **Triage**: Review the exception; categorise by type and urgency\n2. **Investigate**: Pull transaction detail and error_code from txn_error_log\n3. **Action**: Approve (manual override after review), Reject (close with reason), Resubmit (fix data), or Escalate (L3 for SYSTEM_EXCEPTION)\n4. **Document**: All exception actions must be logged in the incident ticket\n\n## Diagnostic Query\n```sql\nSELECT e.exception_id, e.exception_type, t.txn_id, t.amount,\n       e.error_code, e.error_detail, e.created_at\nFROM exception_queue e\nJOIN transactions t ON t.txn_id = e.txn_id\nWHERE t.account_id = ? AND e.status = 'OPEN'\nORDER BY e.created_at ASC;\n```\n\n## SLAs\n- VALIDATION_EXCEPTION: review within 4 hours\n- SYSTEM_EXCEPTION: review within 1 hour (may indicate platform wide issue)\n- AUTHORISATION_EXCEPTION: review within 2 hours\n\n## Escalation Trigger\nIf SYSTEM_EXCEPTION volume spikes (> 10 new in 15 minutes): check for platform wide issue and raise P2 incident.",
+          "dependencies": [
+            11,
+            16
+          ],
+          "sample_question": "You find 50 transactions in SYSTEM_EXCEPTION with error 'DOWNSTREAM_TIMEOUT'. What does this mean and what do you do?",
+          "sample_answer": "DOWNSTREAM_TIMEOUT means processing attempted to call a downstream service and did not receive a response within the timeout window. Check the downstream service health. If it has recovered, use the exception resubmit runbook. Raise a P2 incident if more than 10 items are affected.",
+          "scenario_context": "You notice 30 transactions in MANUAL_REVIEW status in the exception queue. A colleague suggests resolving them all quickly to clear the backlog. What do you do?",
+          "scenario_options": [
+            "Agree and help clear the queue, because the client is waiting",
+            "MANUAL_REVIEW transactions are compliance holds. Only the Compliance team can action these. Never touch MANUAL_REVIEW items as a support engineer",
+            "Apply the SYSTEM_EXCEPTION resubmit runbook to all 30",
+            "Reject all 30 to clear the queue"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "MANUAL_REVIEW = compliance hold. These are flagged by the compliance engine and require Compliance team review. Support engineers touching these items would be a serious compliance violation.",
+          "runbook_ids": [
+            3,
+            1
+          ]
+        },
+        {
+          "id": 19,
+          "path_id": 2,
+          "slug": "data-ingestion-pipeline",
+          "title": "Data Ingestion Pipeline",
+          "description": "Source systems, ingestion schedules, transformation rules, and data quality checks.",
+          "content": "## Overview\nThe Data Ingestion Pipeline receives data from the client's Core Banking System (CBS) and other upstream sources. It runs every 15 minutes and provides account balance updates and confirmation files. When ingestion fails, downstream processes can use stale data.\n\n## Ingestion Sources\n| Source | Data Type | Frequency |\n|---|---|---|\n| CBS | Account balances, account status | Every 15 minutes |\n| Clearing Network | Settlement confirmation files | Post settlement (twice daily) |\n| Reference Data Feed | Currency rates, holiday calendars | Daily at 07:00 UTC |\n| Client Reference Data | Account mapping overrides | On change events |\n\n## Ingestion Pipeline Stages\n```\nSource → Ingestion Gateway → Validation → Transformation → Load → Confirmation\n```\n\n## Failure Points\n- **Ingestion Gateway**: Network connectivity to CBS; check VPN tunnel status if CBS feed stops\n- **Validation**: Schema changes in source data; shows as VALIDATION_ERROR in data_ingestion_log\n- **Load**: DB constraint violation; usually a duplicate key from double submission\n\n## Diagnostic Query\n```sql\nSELECT job_id, source, ingestion_type, started_at, completed_at,\n       status, records_received, records_loaded, error_count, error_detail\nFROM data_ingestion_log\nWHERE started_at >= DATETIME('now', '-2 hours')\nORDER BY started_at DESC;\n```\n\n## Impact of Ingestion Failure\nIf CBS balance data is stale by > 1 hour: HIGH alert fires. Authorisation will use the last known balance, which risks unnecessary declines or overspending. Escalate to L3 immediately if CBS ingestion fails for > 30 minutes.",
+          "dependencies": [
+            11
+          ],
+          "sample_question": "The CBS account data ingestion has not run for 3 hours. What is the impact and how do you investigate?",
+          "sample_answer": "Account data in Fingen may be stale, showing incorrect balances or status for accounts updated in CBS. Check INGESTION_RUN for the CBS job status. Raise a P2 incident if down for more than 2 hours, as it affects authorisation accuracy.",
+          "scenario_context": "INGESTION_RUN shows the CBS account data ingestion has failed 3 times in 6 hours with error 'CBS_CONNECTION_REFUSED'. What is the impact and your action?",
+          "scenario_options": [
+            "This is minor, so continue monitoring and check again tomorrow",
+            "CONNECTION_REFUSED means CBS is not accepting connections, most likely because of a CBS outage or firewall change. Raise a P2 incident and contact the CBS team to check availability. The 6 hour data gap may be affecting authorisation decisions",
+            "Disable the ingestion job until the error stops",
+            "Manually copy account data from CBS to Fingen"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "CONNECTION_REFUSED is not a data error: it means the source system is unreachable. A 6 hour data gap for account balances is a P2 impact because authorisation decisions may be using stale data.",
+          "runbook_ids": [
+            18
+          ]
+        },
+        {
+          "id": 20,
+          "path_id": 2,
+          "slug": "downstream-delivery",
+          "title": "Downstream Delivery",
+          "description": "Report delivery, file exports, downstream notifications, and delivery confirmation.",
+          "content": "## Overview\nDownstream Delivery is the final step: pushing data out to clients via SFTP, webhooks, or API callbacks. Delivery failures are often invisible to the client until they notice missing data, making proactive monitoring critical.\n\n## Delivery Channels\n| Channel | Used For | Recovery |\n|---|---|---|\n| SFTP | Scheduled report files, bulk exports | Automated retry; manual via POST /api/reports/{id}/retry |\n| Webhook (HTTP POST) | Real time event notifications | Exponential backoff retries; manual retry via API |\n| API Callback | Settlement confirmations to client systems | Same as webhook |\n| Secure Email | Ad hoc reports and compliance exports | Manual resend only |\n\n## Webhook Retry Logic\nBackoff: 1min → 5min → 15min → 1hr → 4hr. After max retries: status = ABANDONED.\nThe client endpoint must respond with HTTP 200. Any other response (including 201, 204) is treated as failure unless the delivery config specifies otherwise.\n\n## Diagnostic Queries\n```sql\n-- Failed webhook deliveries, last 24 hours\nSELECT event_type, http_status, response_body, attempt_count, last_attempt_at, status\nFROM webhook_delivery_log\nWHERE account_id = ? AND status != 'DELIVERED'\nAND last_attempt_at >= DATETIME('now', '-24 hours')\nORDER BY last_attempt_at DESC;\n\n-- SFTP delivery failures\nSELECT delivery_id, report_id, sftp_host, error_detail, attempt_count\nFROM delivery_log WHERE account_id = ? AND status = 'FAILED'\nORDER BY created_at DESC LIMIT 10;\n```\n\n## Manual Retry\n```\nPOST /api/deliveries/{delivery_id}/retry\nPOST /api/webhooks/{event_id}/retry\n```\nBoth require Support role. Document retry action in the incident ticket.",
+          "dependencies": [
+            5,
+            16
+          ],
+          "sample_question": "A client reports they did not receive their end of day settlement file via SFTP. How do you investigate?",
+          "sample_answer": "Check DELIVERY_LOG for the client's settlement file delivery entry. Confirm the file was generated by checking REPORT_RUN. If generated and delivery FAILED, review the error. Common causes are incorrect SFTP credentials, server unavailability, or directory permission issues.",
+          "scenario_context": "A client's settlement file delivery has failed all 3 retry attempts. DELIVERY_LOG shows 'SFTP_DIRECTORY_NOT_FOUND' on every attempt. What is the most likely cause and action?",
+          "scenario_options": [
+            "Enable retries again and continue waiting",
+            "The target SFTP directory path in the delivery configuration is incorrect or has been deleted; verify the correct path with the client and raise a Change Request to update the delivery configuration",
+            "Escalate to L3 to rebuild the SFTP server",
+            "Email the file to the client manually"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "SFTP_DIRECTORY_NOT_FOUND means the configured destination path doesn't exist on the client's SFTP server. Verify the correct path with the client, then raise a CR to update the delivery configuration.",
+          "runbook_ids": [
+            16,
+            12
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "l2-support-ops",
+      "title": "L2 Support Operations",
+      "description": "Runbook execution, incident management, escalation procedures, and client communication for L2 engineers.",
+      "nodes": [
+        {
+          "id": 21,
+          "path_id": 3,
+          "slug": "support-tier-model",
+          "title": "Support Tier Model",
+          "description": "L1, L2, and L3 responsibilities, escalation criteria, and handoff procedures.",
+          "content": "## Overview\nFingen uses a three tier support model. Knowing exactly what each tier owns prevents both under escalation (L2 trying to fix what only L3 can) and over escalation (sending L3 a password reset).\n\n## Tier Responsibilities\n| Tier | Owns | Does Not Own |\n|---|---|---|\n| L1 | Password resets, known issue scripts, portal navigation, ticket creation | Application investigation, database queries, runbook execution |\n| L2 | Application investigation, runbook execution, triage queries, client communication, escalation coordination | Code changes, infrastructure changes, direct Production DB writes |\n| L3 | Root cause analysis, code level fixes, infrastructure changes, complex data corrections | Day to day ticket handling |\n\n## Handoff Requirements\n\n**L1 → L2 Handoff must include:**\n- Transaction ID / Account ID\n- Reported error message and timestamp\n- Steps already taken by L1\n- Client contact name and ticket number\n\n**L2 → L3 Escalation must include:**\n- Full investigation summary (what was checked, what was found)\n- Error codes and relevant log extracts\n- Current SLA status and time remaining\n- Proposed root cause hypothesis\n\n## Critical Boundary: Production Data\nL2 engineers have read only access to Production. Any Production data change requires an approved Change Request and must be executed by L3 under DBA oversight. This boundary protects data integrity and maintains audit trail compliance.",
+          "dependencies": [],
+          "sample_question": "A transaction stuck in PROCESSING is escalated from L1 to L2. What information should L1 have captured before the handoff?",
+          "sample_answer": "L1 should document the transaction ID, account number, reported issue, timestamp, and all steps already taken. L2 acknowledges the handoff, confirms the SLA clock, and begins investigation without asking the client to repeat information.",
+          "scenario_context": "An L1 engineer has found a stuck transaction in the database and wants to write an UPDATE SQL statement to manually set its status to COMPLETED. What do you do?",
+          "scenario_options": [
+            "Help them write the UPDATE statement, because the client is waiting",
+            "L1 engineers do not have database write access, and manually updating production data requires an approved Change Request. Redirect L1 to the Transaction Investigation Runbook and handle the escalation to L2 properly",
+            "Ask L3 to do the UPDATE instead, bypassing the change process",
+            "Approve it just this once as an exception"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "Direct production database writes require an approved Change Request regardless of urgency. L1 has read only access. The Transaction Investigation Runbook defines the correct path for stuck transactions.",
+          "runbook_ids": [
+            25
+          ]
+        },
+        {
+          "id": 22,
+          "path_id": 3,
+          "slug": "incident-classification",
+          "title": "Incident Classification",
+          "description": "Severity levels P1 to P4, impact assessment, and initial triage framework.",
+          "content": "## Overview\nCorrect incident classification determines response speed, team engagement, and SLA compliance. Misclassifying a P1 as P2 wastes critical minutes. Overclassifying P3s as P1 dilutes real alerts.\n\n## Severity Matrix\n| Priority | Definition | Response SLA | Notifications Required |\n|---|---|---|---|\n| P1 | Platform wide outage or data integrity breach | 15 minutes | Engineering Manager, Client Success Director |\n| P2 | Major feature unavailable, multiple clients affected | 30 minutes | Engineering Lead, Client Success Manager |\n| P3 | Noncritical feature degraded, single client | 4 hours | Assigned L2 owner, Client Contact |\n| P4 | Cosmetic issue or low impact query | 1 business day | Ticket assignee only |\n\n## Classification Decision Tree\n1. Is any client unable to make payments? → At minimum P2; all clients affected → P1\n2. Is there a data integrity concern (missing funds, wrong amounts)? → P1 regardless\n3. Is a nonpayment feature unavailable for multiple clients? → P2\n4. Is one client experiencing a nonpayment issue? → P3\n5. Is this a UI bug or informational query? → P4\n\n## Reclassification\nIf investigation reveals wider or narrower impact than initially classified: reclassify immediately, adjust the notification chain, and document the reason in the ticket.\n\n## Common Misclassifications\n- Transaction search broken → P2 (not P1, because payments are still processing)\n- Report 2 days late for 1 client → P3 (not P2, because the impact is isolated)\n- All settlement failed → P1 (not P2, because the financial impact is platform wide)",
+          "dependencies": [
+            21
+          ],
+          "sample_question": "The transaction search feature is returning no results for all users. What severity do you classify this as and why?",
+          "sample_answer": "P2: a major feature is unavailable affecting multiple clients, but core transaction processing is still operational. Escalate to P1 only if transaction processing is also impacted.",
+          "scenario_context": "At 09:05 AM, the Operations Dashboard shows transaction FAILED rate at 100%. No payments are processing for any clients. How do you classify this?",
+          "scenario_options": [
+            "P3: monitor for 30 minutes before acting",
+            "P4, because it will probably resolve itself",
+            "P1: platform wide outage; engage the on call engineering team and notify the Engineering Manager and Client Success Director within 15 minutes",
+            "P2: wait for the 30 minute response window to complete"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "100% failure rate across all clients is a platform wide outage, which is P1 by definition. P1 requires a 15 minute initial response, executive notification, and immediate engineering engagement.",
+          "runbook_ids": [
+            21,
+            22
+          ]
+        },
+        {
+          "id": 23,
+          "path_id": 3,
+          "slug": "runbook-navigation",
+          "title": "Runbook Navigation",
+          "description": "Locating, reading, and executing runbooks, version control, and change log review.",
+          "content": "## Overview\nThe Runbook Library contains approved, version controlled operational procedures for all common L2 tasks. A runbook must always be the first reference point before improvising any solution. Improvised fixes in Production are a leading cause of incidents being extended or worsened.\n\n## Runbook Structure\nEvery runbook follows a standard structure:\n1. **Scope**: What issue this runbook addresses and its preconditions\n2. **Steps**: Numbered, explicit actions with expected outputs at each step\n3. **Decision Points**: If/then branches for different outcomes\n4. **Escalation Triggers**: Exactly when to stop and escalate to L3\n5. **Rollback**: What to do if a step produces an unexpected result\n6. **Post actions**: Documentation and client communication required after completion\n\n## How to Find the Right Runbook\n- **By category**: Transactions | Account & User | Batch & Reporting | Integration | Incident Management\n- **By error code**: Search the runbook title for the error code (e.g. SETTLEMENT_FAILED, DELIVERY_FAILED)\n- **By incident type**: Classify the incident first, then navigate to the appropriate category\n\n## Using Runbooks Correctly\n- Always use the latest **Approved** version; never use a Draft or Deprecated version in Production\n- If a step is unclear or produces an unexpected result: **stop and escalate to L3**. Do not improvise.\n- After completing a runbook: update the incident ticket with the runbook ID, version, steps completed, and outcome.\n\n## Suggesting Updates\nIf you find a gap or error in a runbook: raise a runbook change request with the Runbook Owner. Do not edit runbooks directly without going through the approval process.",
+          "dependencies": [
+            21
+          ],
+          "sample_question": "You need to resubmit failed settlement batch transactions and find two versions of the runbook. How do you decide which to use?",
+          "sample_answer": "Always use the higher version number, provided it is marked Approved. Check the change log to understand what changed between versions. If ambiguous, confirm with your team lead before proceeding.",
+          "scenario_context": "The KB shows Settlement Batch Rerun Runbook v1.2 (Approved, updated 3 months ago) and v1.3 (Draft, updated yesterday). Which do you use?",
+          "scenario_options": [
+            "v1.3, because it is the newest and will have the latest steps",
+            "v1.2, because it is the Approved version. v1.3 is still Draft and must not be used in Production until formally approved",
+            "Use whichever is shorter to save time",
+            "Write your own procedure based on both versions"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "Only Approved runbooks should be used in Production. Draft versions have not been reviewed, validated, or approved. Using a Draft runbook in Production is a process violation.",
+          "runbook_ids": []
+        },
+        {
+          "id": 24,
+          "path_id": 3,
+          "slug": "common-failure-scenarios",
+          "title": "Common Failure Scenarios",
+          "description": "Top recurring issues, symptoms, root causes, and first response actions.",
+          "content": "## Overview\nCertain failure patterns appear repeatedly across Fingen client accounts. Knowing the top failure scenarios and their typical causes enables faster triage and reduces mean time to resolution (MTTR).\n\n## Top 10 Failure Patterns\n\n**1. Transaction stuck in PROCESSING**\nSettlement batch failed or missed. Check batch_runs for the settlement batch status on the transaction date.\n\n**2. DELIVERY_FAILED report**\nSFTP credential expired or client endpoint unreachable. Check delivery_config and test SFTP connectivity.\n\n**3. All payments DECLINED with DAILY_LIMIT_EXCEEDED**\nA prior large transaction still in PROCESSING is counting against the daily limit. Check transactions table for PROCESSING records.\n\n**4. Webhook events not received by client**\nClient endpoint returning 4xx/5xx. Check webhook_delivery_log. Often a TLS certificate expiry on the client side.\n\n**5. User cannot log in (not password related)**\nIdP sync failure. Check users table sync status and trigger a resync via POST /api/users/sync.\n\n**6. Account stuck in PND status**\nKYC document pending review beyond SLA. Check kyc_checks table for the blocking step.\n\n**7. Report has wrong date range**\ndelivery_config has an incorrect schedule offset. Review config and raise a change request.\n\n**8. CBS ingestion stale > 1 hour**\nVPN tunnel to CBS may be down. Alert L3 (network team). Do not attempt to fix network infrastructure as L2.\n\n**9. Exception queue spike**\nCBS data returned stale balances, causing cascade of AUTHORISATION_EXCEPTIONs. Fix ingestion first, then bulk resubmit exceptions.\n\n**10. GL posting errors spike at month end**\nCBS GL code mapping not updated for month end chart of accounts changes. Escalate to Finance Operations immediately.",
+          "dependencies": [
+            21,
+            22
+          ],
+          "sample_question": "A report that normally arrives at 07:00 has not arrived by 09:00. Without looking at any systems yet, what are the three most likely causes?",
+          "sample_answer": "1) The report generation batch job failed or ran late. 2) The delivery attempt failed (SFTP error, wrong credentials, or full directory). 3) The report generated and delivered but landed in the wrong directory or under a different filename.",
+          "scenario_context": "The client reports that no scheduled reports have arrived for 3 days. You have confirmed that all report batch jobs show COMPLETED status in REPORT_RUN. What is your next step?",
+          "scenario_options": [
+            "Tell the client the reports were sent and are not your problem",
+            "The batches ran but delivery is failing. Check DELIVERY_LOG for all 3 days and verify the SFTP delivery credentials and target directory. Also ask the client to check alternative directories or filenames on their end",
+            "Rerun all 3 days of reports without investigating",
+            "Escalate to L3, because delivery is their responsibility"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "Reports completed but not received means the failure is in delivery, not generation. Check DELIVERY_LOG before rerunning anything. Rerunning is wasteful if the delivery configuration is still broken.",
+          "runbook_ids": [
+            1,
+            12,
+            18
+          ]
+        },
+        {
+          "id": 25,
+          "path_id": 3,
+          "slug": "database-queries-triage",
+          "title": "Database Queries for Triage",
+          "description": "Read only query toolkit, safe SQL patterns, and data integrity guidelines.",
+          "content": "## Overview\nL2 engineers have read only SELECT access to the Production database. These curated queries cover the most common triage scenarios. Always confirm you are connected to the correct environment before running any query.\n\n## Environment Check (run first every session)\n```sql\nSELECT current_database(), current_setting('app.environment');\n-- Must return: fingen_prod | production\n```\n\n## Transaction Investigation\n```sql\n-- Full transaction detail\nSELECT txn_id, account_id, amount, currency, payment_ref,\n       status, error_code, created_at, updated_at\nFROM transactions WHERE txn_id = 'TXN-XXXXXX';\n\n-- Complete status history\nSELECT status, changed_at, changed_by, reason\nFROM txn_status_log WHERE txn_id = 'TXN-XXXXXX' ORDER BY changed_at ASC;\n\n-- All transactions for an account today\nSELECT txn_id, amount, currency, status, created_at\nFROM transactions\nWHERE account_id = ? AND DATE(created_at) = CURRENT_DATE\nORDER BY created_at DESC;\n```\n\n## Account Investigation\n```sql\n-- Account status and limits\nSELECT id, account_number, status, account_type, compliance_hold, daily_limit\nFROM accounts WHERE account_number = 'ACC-XXXXXX';\n\n-- Recent audit events\nSELECT ts, actor_type, action, old_value, new_value\nFROM audit_log WHERE entity_type = 'ACCOUNT' AND entity_id = ?\nORDER BY ts DESC LIMIT 10;\n```\n\n## Batch and Report Health\n```sql\n-- Today's batch summary\nSELECT batch_type, status, total_txns, failed_txns, scheduled_time, end_time\nFROM batch_runs WHERE DATE(scheduled_time) = CURRENT_DATE ORDER BY scheduled_time;\n\n-- Failed reports, last 7 days\nSELECT report_id, report_type, account_id, scheduled_date, status, error_detail\nFROM reports WHERE status = 'DELIVERY_FAILED' AND scheduled_date >= CURRENT_DATE - 7;\n```",
+          "dependencies": [
+            23
+          ],
+          "sample_question": "You need to find all FAILED transactions for account 12345 in the last 24 hours. Write a safe query and explain your safeguards.",
+          "sample_answer": "SELECT txn_id, txn_type, amount, status, created_at FROM transactions WHERE account_id = 12345 AND status = 'FAILED' AND created_at >= NOW() - INTERVAL '24 hours' FETCH FIRST 100 ROWS ONLY; Safeguards: SELECT only, scoped WHERE clause, FETCH FIRST cap.",
+          "scenario_context": "You need to find all FAILED transactions for account 99001 from yesterday. Which query is correct and safe for Production use?",
+          "scenario_options": [
+            "SELECT * FROM transactions WHERE account_id = 99001",
+            "UPDATE transactions SET status='COMPLETED' WHERE account_id = 99001 AND status='FAILED'",
+            "SELECT txn_id, status, amount, created_at FROM transactions WHERE account_id = 99001 AND status = 'FAILED' AND created_at >= CURRENT_DATE - 1 FETCH FIRST 100 ROWS ONLY",
+            "DELETE FROM transactions WHERE status='FAILED'"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "Option C: SELECT only (no data modification), scoped WHERE clause (specific account + date + status), FETCH FIRST to prevent runaway results. Options B and D are write operations, which are strictly prohibited for L2 engineers.",
+          "runbook_ids": [
+            1,
+            7
+          ]
+        },
+        {
+          "id": 26,
+          "path_id": 3,
+          "slug": "escalation-matrix",
+          "title": "Escalation Matrix",
+          "description": "Who to escalate to, when, contact structure, and SLA breach protocols.",
+          "content": "## Overview\nThe Escalation Matrix defines exactly who to contact and when based on incident severity and the affected service area. Following the matrix ensures the right people are engaged at the right time.\n\n## Escalation by Severity\n| Severity | First Contact | If No Response in 15 min | Executive Notification |\n|---|---|---|---|\n| P1 | On call L3 Engineer (PagerDuty) | Engineering Manager + Client Success Director | CTO after 30 min unresolved |\n| P2 | Engineering Lead (Slack #incidents) | Engineering Manager after 30 min | Client Success Manager after 1 hr |\n| P3 | L3 ticket queue | Engineering Lead after 3 hrs | None unless client requested |\n| P4 | L3 ticket queue | Engineering Lead next business day | None |\n\n## Escalation by Service Area\n| Service | L3 Owner | PagerDuty Rotation |\n|---|---|---|\n| Transaction Engine | Payments Engineering | fingen-payments-oncall |\n| Settlement / GL | Finance Tech Engineering | fingen-finance-oncall |\n| Reporting / Delivery | Data Platform Engineering | fingen-data-oncall |\n| Integration / CBS | Integration Engineering | fingen-integration-oncall |\n| Account / User | Platform Engineering | fingen-platform-oncall |\n\n## Client Escalation Rule\nDuring P1/P2 incidents, the Client Success Manager (CSM) manages all external communication. L2 engineers provide updates to the CSM and do not contact the client directly during an active P1/P2.\n\n## Antipatterns to Avoid\n- Escalating without a full investigation summary\n- Waiting past the SLA trigger time hoping the issue resolves itself\n- Contacting executives directly without going through the CSM",
+          "dependencies": [
+            22,
+            23
+          ],
+          "sample_question": "You have been investigating a P2 transaction processing issue for 25 minutes without resolution. What should you have done 5 minutes ago?",
+          "sample_answer": "At the 20 minute mark, an escalation to Payments Engineering on call should have been initiated via PagerDuty. The client should also have received a status update with a revised ETA.",
+          "scenario_context": "It is 14:28. A P2 transaction processing issue was raised at 14:00. You have been investigating for 28 minutes and are very close to identifying the cause, but have not yet escalated. What should you do right now?",
+          "scenario_options": [
+            "Continue, because you are almost at the answer and can escalate after resolving",
+            "Escalate immediately to Payments Engineering on call via PagerDuty and notify the client. You should have done this at the 20 minute mark. Do both now, even though you are close to resolving it",
+            "Downgrade to P3 to buy more investigation time",
+            "Wait for the 30 minute SLA to expire before escalating"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "P2 escalation to on call must happen at 20 minutes regardless of investigation progress. Being close to a solution does not waive the escalation requirement. Notify the client simultaneously.",
+          "runbook_ids": [
+            25
+          ]
+        },
+        {
+          "id": 27,
+          "path_id": 3,
+          "slug": "change-management",
+          "title": "Change Management",
+          "description": "Change request process, CAB approvals, implementation steps, and rollback procedures.",
+          "content": "## Overview\nChange Management controls how modifications to the Production environment are planned, approved, and executed. Every Production change, no matter how minor, must go through this process. The CAB exists to prevent outages caused by uncontrolled changes.\n\n## Change Types\n| Type | Definition | Approval | Lead Time |\n|---|---|---|---|\n| Standard | Preapproved, low risk change from approved template | Auto approved | Raise 24 hrs before |\n| Normal | Planned change requiring CAB review | Weekly CAB vote | Raise 5 business days before |\n| Emergency | Urgent change needed for P1/P2 resolution | Engineering Manager + On call Lead | Immediate; post approval < 1 hr |\n\n## L2 Engineer Role in Change Management\nL2 engineers do not execute changes directly in Production. The L2 role is to:\n1. Identify that a change is required (e.g. a config parameter needs updating)\n2. Document the required change with full justification in a Change Request (CR)\n3. Work with the Change Manager to classify it (Standard/Normal/Emergency)\n4. Provide technical context for the CAB or approver\n5. Validate the outcome after L3 executes it\n\n## Change Windows\n- **Standard**: Tuesday and Thursday, 22:00 to 02:00 UTC\n- **Emergency**: Any time with Engineering Manager approval; client notification required if > 15 min expected impact\n\n## Post Change Validation\nAfter every Production change: monitor the Operations Dashboard for 30 minutes. If new alerts appear within this window, immediately flag to the Change implementer for potential rollback.",
+          "dependencies": [
+            23
+          ],
+          "sample_question": "A client is urgently requesting a transaction limit increase in Production. How do you handle this?",
+          "sample_answer": "Raise an Emergency Change Request with the justification, current and requested limit values, impact assessment, and rollback plan. Obtain verbal CAB approval and document it same day. Do not make the change without an approved CR.",
+          "scenario_context": "You discover a misconfigured fee rate is charging clients 2% instead of the agreed 0.5%. You have identified the exact Config Service parameter. What is the correct action?",
+          "scenario_options": [
+            "Fix it immediately, because clients are being overcharged and every minute costs them money",
+            "Raise a Normal Change Request and wait 48 hours for CAB approval",
+            "Raise an Emergency Change Request citing active client harm, obtain verbal CAB approval, correct the config, and document everything same day",
+            "Ask a colleague to make the change so you are not accountable"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "Active client financial harm justifies the Emergency CR path. Verbal CAB approval is required before the change. Fixing it without any CR, even to stop an overcharge, is a compliance violation that could cause bigger problems.",
+          "runbook_ids": []
+        },
+        {
+          "id": 28,
+          "path_id": 3,
+          "slug": "monitoring-alerts",
+          "title": "Monitoring & Alert Runbooks",
+          "description": "Alert interpretation, dashboards, false positive identification, and response procedures.",
+          "content": "## Overview\nMonitoring alerts are the proactive side of L2 support: they flag issues before a client calls. Every Fingen alert maps to a runbook. Knowing the common alerts and their runbooks dramatically reduces response time.\n\n## Alert to Runbook Mapping\n| Alert | Severity | Runbook |\n|---|---|---|\n| TXN_FAILURE_RATE_HIGH | HIGH/CRITICAL | Transaction Investigation & Resubmit |\n| SETTLEMENT_BATCH_DELAYED | HIGH | Settlement Batch Rerun |\n| SETTLEMENT_BATCH_FAILED | CRITICAL | Settlement Batch Rerun |\n| EXCEPTION_QUEUE_SPIKE | HIGH | Exception Queue Management |\n| RECON_BREAKS_DETECTED | HIGH | Reconciliation Break Investigation |\n| REPORT_DELIVERY_FAILED | MEDIUM | Report Delivery Failure Investigation |\n| SFTP_CREDENTIAL_EXPIRY_7D | LOW | SFTP Credential Renewal |\n| CBS_INGESTION_STALE | HIGH | CBS Ingestion Failure Response |\n| WEBHOOK_DELIVERY_ABANDONED | MEDIUM | Integration Gateway Diagnostic |\n| GL_POSTING_ERRORS | HIGH | GL Posting Error Recovery |\n\n## Alert Response Procedure\n1. **Acknowledge** the alert in PagerDuty within the SLA window (stops the escalation chain)\n2. **Verify** on the Operations Dashboard: confirm the alert is genuine (rule out false positives from monitoring restarts)\n3. **Open** the associated runbook in the Runbook Library\n4. **Execute** the runbook; document each step in the incident ticket\n\n## False Positive Recognition\nSome alerts fire during planned maintenance or immediately after a deployment. Check the Change Register for any changes in the last 30 minutes before treating an alert as a genuine incident.",
+          "dependencies": [
+            22,
+            26
+          ],
+          "sample_question": "You receive a HIGH_FAILED_TXN_RATE alert at 02:00 UTC. A maintenance window is scheduled for 01:00 to 03:00 UTC. What do you do?",
+          "sample_answer": "Check whether the maintenance activity could explain the elevated failure rate. If consistent with the maintenance scope, acknowledge and monitor for recovery. If higher than expected, raise an incident and escalate to the team performing the maintenance.",
+          "scenario_context": "A SETTLEMENT_BATCH_FAILURE alert fires at 02:05 UTC. The maintenance schedule shows a planned database patching window from 01:30 to 02:30 UTC that includes the settlement service. What is your response?",
+          "scenario_options": [
+            "Raise a P1 incident immediately, because settlement has failed",
+            "The alert is likely a false positive from the planned maintenance. Acknowledge it, check the maintenance team's latest status, and monitor for recovery after 02:30 UTC. Only raise an incident if the batch does not recover once the maintenance window closes",
+            "Ignore the alert and go back to sleep",
+            "Page the Engineering Director immediately"
+          ],
+          "scenario_correct": 1,
+          "scenario_explanation": "Maintenance windows can trigger infrastructure alerts. Confirm with the maintenance team whether this is expected before raising an incident. Acknowledge the alert (don't ignore it), and verify recovery after the window closes.",
+          "runbook_ids": [
+            14,
+            17
+          ]
+        },
+        {
+          "id": 29,
+          "path_id": 3,
+          "slug": "client-communication",
+          "title": "Client Communication Standards",
+          "description": "Status update templates, escalation language, SLA reporting, and professional communication norms.",
+          "content": "## Overview\nDuring incidents, client communication is as important as technical resolution. Poor communication causes client escalations and SLA disputes, even when the technical issue was resolved quickly.\n\n## Communication Principles\n1. **Acknowledge quickly**: Send the initial acknowledgement within the SLA response window, even if you have no resolution yet\n2. **Be factual, not speculative**: State what you know; do not speculate about root cause until confirmed\n3. **Set clear expectations**: Always give a next update time: \"We will provide an update by 14:30 UTC\"\n4. **Use approved templates**: All P1/P2 client messages must use the approved Client Communication Templates from the Runbook Library\n\n## Communication Chain for P1/P2\n1. L2 → CSM (Client Success Manager): technical summary, current status, estimated resolution time\n2. CSM → Client: approved template message with business impact language\n3. L2 → CSM every 30 minutes: updated status with new findings\n4. CSM → Client: update using the \"continuing to investigate\" template\n\n## Status Categories for Client Messages\n- **Investigating**: We are aware and investigating\n- **Identified**: We have identified the root cause and are working on resolution\n- **Monitoring**: Fix applied; monitoring for stability\n- **Resolved**: Service fully restored; full RCA to follow within 24 hours\n\n## What NOT to Include in Client Messages\n- Internal system names (CBS, batch job IDs, microservice names)\n- Technical error codes or stack traces\n- Blame attribution to specific vendors or teams\n- Speculation about root cause before it is confirmed",
+          "dependencies": [
+            22,
+            26
+          ],
+          "sample_question": "Draft a client status update for a P2 transaction search outage that has been ongoing for 45 minutes.",
+          "sample_answer": "Subject: Service Update (Transaction Search Availability). We are aware that the transaction search feature is currently unavailable and our engineering team is actively investigating. Transaction processing is not affected. We will provide a further update within 30 minutes.",
+          "scenario_context": "A P1 outage is ongoing. The client account manager calls asking for an update to pass to their client. You do not yet know the root cause. What do you say?",
+          "scenario_options": [
+            "Say 'I think it might be a database issue but I'm not 100% sure'",
+            "Decline to give any update until the root cause is confirmed",
+            "Provide a factual status update: confirm what is impacted, that the engineering team is actively investigating, the current response timeline, and when the next update will follow, without speculating on root cause",
+            "Tell them it will be fixed in 10 minutes to manage their expectations"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "Client updates must state confirmed facts only: what is impacted, what is being done, and when the next update will come. Speculating on root cause or making promises about resolution time without confirmation is unprofessional and may create larger problems.",
+          "runbook_ids": [
+            24
+          ]
+        },
+        {
+          "id": 30,
+          "path_id": 3,
+          "slug": "post-incident-review",
+          "title": "Post Incident Review",
+          "description": "PIR structure, root cause analysis, action item tracking, and continuous improvement process.",
+          "content": "## Overview\nThe Post Incident Review (PIR) is a structured learning exercise conducted after every P1 and significant P2. Its purpose is to understand what happened, why it happened, and how to prevent or detect it faster next time. PIRs are blameless: they focus on systems and processes, not on individuals.\n\n## PIR Timeline\n- **P1 incidents**: PIR must be completed within 24 hours of resolution\n- **P2 incidents**: PIR must be completed within 48 hours of resolution\n- **PIR Owner**: The L2 engineer who led the incident coordinates the PIR document\n\n## PIR Structure\n1. **Incident Summary**: Title, date/time, duration, severity, clients impacted\n2. **Timeline**: Chronological sequence from first alert to resolution (use audit log and ticket timestamps)\n3. **Root Cause**: The confirmed technical cause (not speculated)\n4. **Contributing Factors**: Process gaps, monitoring blind spots, or config issues that allowed the root cause to manifest\n5. **Client Impact**: Clients affected, transactions impacted, SLA breach status\n6. **What Went Well**: Actions that limited or contained the impact\n7. **Action Items**: Specific, measurable improvements with owners and due dates\n8. **Runbook Updates**: Were any runbooks unclear or missing? Raise a change request.\n\n## Blameless Culture\nPIRs must not assign personal blame. \"The engineer ran the wrong query\" is not a root cause; \"Production query tooling does not prevent writes from the triage UI\" is. Focus on systemic improvements.\n\n## Action Item Tracking\nAll PIR action items are tracked in the Engineering backlog. L2 engineers follow up on assigned items in the monthly Operations Review.",
+          "dependencies": [
+            22,
+            27,
+            28
+          ],
+          "sample_question": "This is the third time in a month the settlement batch has failed due to the same timeout error. What should the PIR recommendation be?",
+          "sample_answer": "The PIR should recommend escalation of the root cause to engineering leadership as a systemic issue. The action item should require a permanent fix with a named owner and deadline, not just another monitoring improvement.",
+          "scenario_context": "A PIR for last week's P2 is being written. The same payment network timeout has caused a batch failure three times this month. Previous PIR action items said 'improve monitoring'. What should this PIR recommend instead?",
+          "scenario_options": [
+            "Write the same monitoring recommendation, because consistency is important",
+            "Close the PIR quickly to avoid drawing attention to the pattern",
+            "Escalate this as a systemic issue to engineering leadership; recommend a permanent engineering fix (timeout increase, circuit breaker, or performance improvement) with a named owner and a firm deadline",
+            "Remove the prior incidents from the record to avoid embarrassing the team"
+          ],
+          "scenario_correct": 2,
+          "scenario_explanation": "'Improve monitoring' repeatedly for the same root cause means the actual problem was never fixed. The PIR must recommend a permanent engineering solution and flag this as a systemic issue. The named owner and deadline create accountability.",
+          "runbook_ids": [
+            23
+          ]
+        }
+      ]
+    }
+  ],
+  "runbooks": [
+    {
+      "id": 1,
+      "slug": "transaction-investigation-resubmit",
+      "title": "Transaction Investigation & Resubmit",
+      "category": "Transactions",
+      "version": "v2.3",
+      "updated": "14 Apr 2025",
+      "description": "Step by step guide for investigating transactions stuck in PROCESSING status and resubmitting via the exception queue.",
+      "preconditions": [
+        "Incident ticket is open and SLA clock is running",
+        "You have read only database access confirmed",
+        "Check the Operations Dashboard and note whether a Settlement Batch alert is also active"
+      ],
+      "steps": [
+        "Retrieve the transaction ID from the ticket. Run: SELECT txn_id, account_id, amount, currency, status, created_at, updated_at, error_code FROM transactions WHERE txn_id = 'TXN-XXXXXX';",
+        "Check the full status history: SELECT status, changed_at, changed_by, reason FROM txn_status_log WHERE txn_id = 'TXN-XXXXXX' ORDER BY changed_at ASC;",
+        "If the last status is PROCESSING, check the settlement batch that should have picked it up: SELECT batch_id, status, start_time, end_time, failed_txns FROM batch_runs WHERE batch_type = 'SETTLEMENT' AND scheduled_time <= (SELECT created_at FROM transactions WHERE txn_id = 'TXN-XXXXXX') ORDER BY scheduled_time DESC LIMIT 2;",
+        "If the batch completed with COMPLETED status and the transaction was not settled, check the exception queue: SELECT * FROM exception_queue WHERE txn_id = 'TXN-XXXXXX';",
+        "If no exception exists and the transaction is still PROCESSING after the batch completed: escalate to L3 with the full status history, batch details, and this runbook step number. Do not proceed further.",
+        "If the transaction is in the exception queue with a SYSTEM_EXCEPTION: document the exception_id and error_detail in the ticket, then escalate to L3 for resubmission approval.",
+        "If the transaction has a VALIDATION_EXCEPTION: review the error_detail. If the issue is resolvable (e.g. account now ACT), request L3 approval to resubmit via POST /api/exceptions/{exception_id}/resubmit.",
+        "After resolution (by L3 or automated retry): confirm the transaction reaches SETTLED status. Notify the client with the resolution time and final status.",
+        "Update the incident ticket with: steps taken, exception ID (if applicable), runbook version used, and final outcome."
+      ],
+      "escalation_triggers": [
+        "Transaction stuck in PROCESSING for > 2 hours with no exception record",
+        "SYSTEM_EXCEPTION with error_code CLEARING_TIMEOUT or NETWORK_UNAVAILABLE",
+        "Batch completed but > 5 transactions in same state (possible batch level issue)"
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "settlement-batch-re-run",
+      "title": "Settlement Batch Rerun",
+      "category": "Transactions",
+      "version": "v1.4",
+      "updated": "02 Mar 2025",
+      "description": "Procedure for investigating and rerunning failed settlement batch jobs, including checkpoint recovery steps.",
+      "preconditions": [
+        "A SETTLEMENT_BATCH_FAILED or SETTLEMENT_BATCH_DELAYED alert is active",
+        "Confirm the incident severity (batch failure is typically P2)",
+        "Do not attempt to rerun a batch without L3 approval"
+      ],
+      "steps": [
+        "Confirm the batch failure: SELECT batch_id, batch_type, scheduled_time, start_time, end_time, status, total_txns, settled_txns, failed_txns, error_detail FROM batch_runs WHERE batch_type = 'SETTLEMENT' AND DATE(scheduled_time) = CURRENT_DATE ORDER BY scheduled_time;",
+        "Identify the error_detail in the failed batch record. Common values: CLEARING_TIMEOUT (external), DB_LOCK_TIMEOUT (internal), QUEUE_OVERFLOW (volume spike).",
+        "Check if the batch is still RUNNING or genuinely FAILED: if RUNNING for > 60 minutes past its scheduled end time, treat as stuck.",
+        "Check how many transactions are affected: SELECT COUNT(*) FROM transactions WHERE status = 'AUTHORISED' AND created_at <= (SELECT scheduled_time FROM batch_runs WHERE batch_id = 'BATCH-XXXXXX');",
+        "Escalate to L3 with: batch_id, error_detail, affected transaction count, current SLA time remaining, and this runbook step number.",
+        "L3 will assess whether to: (a) resume from checkpoint, (b) rerun the full batch, or (c) wait for the next scheduled cycle if the volume is low.",
+        "During the escalation window, communicate with the CSM: \"We are aware of a settlement processing delay and are investigating with our engineering team. We will update you by [time].\"",
+        "Once L3 confirms the batch is rerunning: monitor the batch status in batch_runs every 5 minutes until status = COMPLETED.",
+        "After batch completion: confirm settled_txns matches total_txns. If failed_txns > 0, identify those transactions and open a separate investigation per the Transaction Investigation runbook.",
+        "Update the incident ticket and notify the CSM of resolution. Confirm SLA breach status for the ticket record."
+      ],
+      "escalation_triggers": [
+        "Batch status FAILED (not just delayed)",
+        "Batch stuck in RUNNING for > 60 minutes past scheduled end",
+        "Second consecutive settlement batch fails"
+      ]
+    },
+    {
+      "id": 3,
+      "slug": "exception-queue-management",
+      "title": "Exception Queue Management",
+      "category": "Transactions",
+      "version": "v1.2",
+      "updated": "18 Jan 2025",
+      "description": "Guidelines for reviewing, categorising, and actioning VALIDATION_EXCEPTION and SYSTEM_EXCEPTION queue items.",
+      "preconditions": [
+        "Incident ticket raised or monitoring alert active for exception queue spike",
+        "Confirm your Support role access to the exception queue UI or database",
+        "Check Operations Dashboard for any active settlement or integration alerts that may explain the spike"
+      ],
+      "steps": [
+        "Get a count and breakdown of the open exception queue: SELECT exception_type, COUNT(*) as count, MIN(created_at) as oldest FROM exception_queue WHERE status = 'OPEN' GROUP BY exception_type;",
+        "If SYSTEM_EXCEPTION count is > 10 and growing: check for a platform wide issue first (Operations Dashboard service health). Treat as P2 and escalate to L3 before processing individual items.",
+        "For VALIDATION_EXCEPTION items: review each exception. SELECT e.exception_id, e.error_code, e.error_detail, t.account_id, t.amount, t.payment_ref FROM exception_queue e JOIN transactions t ON t.txn_id = e.txn_id WHERE e.exception_type = 'VALIDATION_EXCEPTION' AND e.status = 'OPEN' ORDER BY e.created_at ASC LIMIT 20;",
+        "For each VALIDATION_EXCEPTION: identify whether the root cause is fixable (e.g. account now ACT). If yes, document and prepare for resubmission. If no (e.g. invalid account number): reject with reason code.",
+        "Do not action SYSTEM_EXCEPTIONs without L3 approval. Log each item in the ticket and pass to L3 with the error_code and error_detail.",
+        "For DUPLICATE_EXCEPTIONs: verify with the client whether the payment is genuinely new or a resubmission. If confirmed duplicate: reject. If confirmed unique: approve for resubmission with documentation.",
+        "Resubmit approved exceptions: POST /api/exceptions/{exception_id}/resubmit (requires Support role). Confirm the transaction enters VALIDATED status.",
+        "Reject exceptions with reason: POST /api/exceptions/{exception_id}/reject with body {\"reason\": \"INVALID_ACCOUNT: account closed per audit_log entry 20240105-0023\"}.",
+        "After clearing the queue: confirm the exception queue is empty or below 5 open items. Update the incident ticket with the count resolved, count escalated to L3, and actions taken."
+      ],
+      "escalation_triggers": [
+        "SYSTEM_EXCEPTION count > 10 and growing",
+        "AUTHORISATION_EXCEPTION with amount > £100,000",
+        "Any exception with error_code DATA_CORRUPTION"
+      ]
+    },
+    {
+      "id": 4,
+      "slug": "reconciliation-break-investigation",
+      "title": "Reconciliation Break Investigation",
+      "category": "Transactions",
+      "version": "v2.0",
+      "updated": "07 Feb 2025",
+      "description": "Process for identifying, categorising, and escalating MISSING_INBOUND, MISSING_OUTBOUND, and AMOUNT_MISMATCH breaks.",
+      "preconditions": [
+        "Daily reconciliation batch has completed (check batch_runs for RECON batch = COMPLETED)",
+        "Finance Operations team has been notified if break count > 0 (they must be aware)",
+        "Do not adjust any transaction amounts or statuses; this requires Finance Operations approval"
+      ],
+      "steps": [
+        "Get the break summary for today: SELECT break_type, COUNT(*) as count, SUM(fingen_amount) as total_fingen_value FROM recon_breaks WHERE DATE(detected_at) = CURRENT_DATE AND status = 'OPEN' GROUP BY break_type;",
+        "For MISSING_OUTBOUND breaks (most critical: Fingen shows SETTLED but clearing network has no record): SELECT break_id, txn_id, fingen_amount, detected_at FROM recon_breaks WHERE break_type = 'MISSING_OUTBOUND' AND status = 'OPEN';",
+        "Check whether MISSING_OUTBOUND breaks are timing related: if the transaction settled within 2 hours of the recon batch running, it may simply be a lag in the clearing network confirmation file. Wait 30 minutes and recheck.",
+        "For MISSING_INBOUND breaks (clearing network shows receipt; Fingen has no record): check whether the transaction exists in Fingen under a different reference. Search by amount + date range in the transactions table.",
+        "For AMOUNT_MISMATCH breaks: compare fingen_amount vs external_amount in the recon_breaks record. Check if the difference matches any fee or FX conversion that should have been applied.",
+        "Categorise each break as: TIMING (likely to resolve on its own), GENUINE (requires action), or UNKNOWN (requires L3 investigation).",
+        "For GENUINE and UNKNOWN breaks: escalate to Finance Operations and L3 immediately. Provide break_id, break_type, amounts, and your categorisation.",
+        "Never manually correct transaction amounts or create journal entries. This is Finance Operations territory and requires full authorisation.",
+        "After L3 and Finance Operations resolve the breaks: confirm the recon_breaks records are closed (status = RESOLVED). Update the incident ticket."
+      ],
+      "escalation_triggers": [
+        "Any MISSING_OUTBOUND break (regardless of amount)",
+        "AMOUNT_MISMATCH where difference > £1,000",
+        "Total open breaks > 10 after timing check"
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "gl-posting-error-recovery",
+      "title": "GL Posting Error Recovery",
+      "category": "Transactions",
+      "version": "v1.1",
+      "updated": "22 Nov 2024",
+      "description": "Steps for diagnosing GL_POSTING_ERROR records and coordinating transaction reposting with Finance Operations.",
+      "preconditions": [
+        "GL_POSTING_ERRORS alert is active",
+        "Finance Operations team must be notified within 1 hour of any GL posting error",
+        "Do not attempt to retry GL posting without Finance Operations approval"
+      ],
+      "steps": [
+        "Identify the scope: SELECT COUNT(*) as error_count, MIN(settled_at) as first_affected FROM transactions WHERE status = 'SETTLED' AND gl_status != 'GL_POSTED' AND settled_at >= DATETIME('now', '-24 hours');",
+        "Get error details: SELECT txn_id, account_id, amount, settled_at, gl_status, gl_error_code FROM transactions WHERE status = 'SETTLED' AND gl_status != 'GL_POSTED' AND settled_at >= DATETIME('now', '-24 hours') LIMIT 20;",
+        "Immediately notify Finance Operations with: error count, total value affected, error codes, and time range. This is a compliance impacting issue.",
+        "For gl_error_code = CBS_TIMEOUT: check the CBS integration health on the Operations Dashboard. If CBS is showing AMBER or RED, the GL_POSTING_SWEEP batch will retry automatically once CBS recovers.",
+        "For gl_error_code = INVALID_GL_CODE: this indicates an account GL code mapping is missing or incorrect. Do not retry; escalate to Finance Operations to fix the GL code mapping first.",
+        "For gl_error_code = GL_POSTING_ERROR with CBS detail: pull the CBS response from the integration log: SELECT response_detail FROM integration_log WHERE entity_id = 'TXN-XXXXXX' AND integration_type = 'GL_POST' ORDER BY ts DESC LIMIT 3;",
+        "After Finance Operations confirms the root cause is resolved: L3 will trigger the GL_POSTING_SWEEP batch or manual repost. Monitor gl_status updates.",
+        "Confirm all affected transactions reach gl_status = GL_POSTED. Update the incident ticket with Finance Operations approval reference, root cause, and resolution."
+      ],
+      "escalation_triggers": [
+        "Any GL posting error (Finance Operations must always be notified within 1 hour)",
+        "gl_error_code = INVALID_GL_CODE (mapping fix required before any retry)",
+        "Error count > 50 transactions"
+      ]
+    },
+    {
+      "id": 6,
+      "slug": "bulk-payment-file-rejection",
+      "title": "Bulk Payment File Rejection",
+      "category": "Transactions",
+      "version": "v1.0",
+      "updated": "10 Oct 2024",
+      "description": "Guide for identifying file level and record level rejection codes and communicating corrections to clients.",
+      "preconditions": [
+        "Client has reported that a bulk payment file was uploaded but transactions are not appearing or are rejected",
+        "Obtain the file_id or filename from the client"
+      ],
+      "steps": [
+        "Find the file upload record: SELECT file_id, filename, submitted_at, total_records, accepted, rejected, status, error_summary FROM file_upload_log WHERE account_id = ? ORDER BY submitted_at DESC LIMIT 5;",
+        "If status = FILE_REJECTED (entire file rejected): check error_summary for file level errors such as INVALID_HEADER, UNSUPPORTED_FORMAT, or FILE_TOO_LARGE.",
+        "If status = PARTIAL_ACCEPTED: identify rejected records. SELECT record_number, payment_ref, error_code, error_detail FROM file_record_errors WHERE file_id = ? ORDER BY record_number;",
+        "Categorise the rejection codes: INVALID_ACCOUNT (account not found or not ACT), INVALID_CURRENCY (unsupported currency), DUPLICATE_TXN (dedup window), MISSING_FIELD (mandatory field absent), AMOUNT_EXCEEDS_LIMIT (single transaction limit).",
+        "Prepare an error report for the client: list each rejected record number, payment_ref, and the specific error code with a plain English description.",
+        "For DUPLICATE_TXN rejections: check if the client submitted the same file twice within the dedup window. Pull submission timestamps from file_upload_log.",
+        "For INVALID_ACCOUNT rejections: verify whether the accounts exist in Fingen and are in ACT status. If accounts are valid but not in ACT, investigate the account status separately.",
+        "Send the error report to the client with correction guidance: \"Please correct the records listed below and resubmit only the rejected records. Do not resubmit the entire file as the accepted records have already been processed.\"",
+        "After the client resubmits: monitor the new file upload and confirm all records are accepted."
+      ],
+      "escalation_triggers": [
+        "100% file rejection with no clear format error",
+        "AMOUNT_EXCEEDS_LIMIT on amounts that should be within the client's configured limit",
+        "File_upload_log shows no record of a file the client claims to have submitted"
+      ]
+    },
+    {
+      "id": 7,
+      "slug": "account-status-investigation",
+      "title": "Account Status Investigation",
+      "category": "Account & User",
+      "version": "v2.1",
+      "updated": "28 Mar 2025",
+      "description": "Procedure for investigating unexpected account status changes, including compliance triggered suspensions.",
+      "preconditions": [
+        "Client reports that an account is not accepting transactions or has an unexpected status",
+        "Have the account number or account ID ready"
+      ],
+      "steps": [
+        "Check the account status: SELECT id, account_number, status, account_type, compliance_hold, daily_limit, created_at FROM accounts WHERE account_number = 'ACC-XXXXXX';",
+        "If status = SUS (Suspended): check the audit log for the trigger. SELECT ts, actor_type, actor_id, action, old_value, new_value FROM audit_log WHERE entity_type = 'ACCOUNT' AND entity_id = ? AND action = 'STATUS_CHANGE' ORDER BY ts DESC LIMIT 3;",
+        "If actor_type = SYSTEM and the trigger is COMPLIANCE_RULE: this is an automated compliance suspension. Do not reverse without Compliance team approval. Contact the Compliance team with the account_id and suspension timestamp.",
+        "If actor_type = USER: identify who set the suspension. Check if it was intentional (e.g. client requested) or erroneous.",
+        "If status = REV (Under Review): the account is under a compliance investigation. L2 cannot take any action on REV accounts without Compliance team instruction.",
+        "If status = PND (Pending): check the KYC status: SELECT step_name, status, submitted_at, reviewed_at FROM kyc_checks WHERE account_id = ? ORDER BY created_at DESC;",
+        "If status = CLO (Closed): confirm with the client whether a closure was expected. Closed accounts cannot be reopened; a new account must be created.",
+        "For SUS accounts where Compliance approves reactivation: escalate to L3 with Compliance approval reference for the status change. Do not change status directly.",
+        "Update the ticket with: current status, root cause of status change, and resolution action taken or escalation path."
+      ],
+      "escalation_triggers": [
+        "Account in SUS with compliance_hold = true (Compliance team involvement required)",
+        "Account in REV status (any status change requires Compliance approval)",
+        "Account shows as CLO but client reports receiving a recent transaction confirmation"
+      ]
+    },
+    {
+      "id": 8,
+      "slug": "user-access-troubleshooting",
+      "title": "User Access Troubleshooting",
+      "category": "Account & User",
+      "version": "v1.3",
+      "updated": "15 Jan 2025",
+      "description": "Steps for diagnosing login failures, role mismatches, and identity provider sync issues.",
+      "preconditions": [
+        "User reports they cannot log in or cannot access a specific module",
+        "Confirm whether the issue affects one user or multiple users (multiple = possible IdP outage)"
+      ],
+      "steps": [
+        "Check the user record in Fingen: SELECT id, name, email, role, status, last_login, idp_sync_status FROM users WHERE email = 'user@client.com';",
+        "If status = INACTIVE or LOCKED: check the IdP (Azure AD or Okta) for the user's account status. L2 cannot unlock IdP accounts directly; the client's IT admin must unlock at the IdP level.",
+        "If idp_sync_status = SYNC_FAILED: trigger a manual resync via POST /api/users/sync with body {\"email\": \"user@client.com\", \"force\": true}. Wait 60 seconds and recheck status.",
+        "If the user can log in but cannot access a module: check their current role in Fingen vs the permission matrix. SELECT role FROM users WHERE email = 'user@client.com';",
+        "Compare the user's role against the module access matrix. If the role does not include access to the requested module: confirm whether an access upgrade is appropriate, then raise a Change Request for a role update.",
+        "If multiple users are affected: check whether the IdP is experiencing an outage. Check the client's IdP status page or contact their IT admin.",
+        "If the first login link has expired (links expire in 24 hours): trigger a new invite. POST /api/users/{user_id}/resend-invite.",
+        "If the user reports a \"session expired\" loop: check Redis cache health on the Operations Dashboard. A Redis AMBER status can cause session validation failures.",
+        "Update the ticket with root cause and resolution. If an access change request was raised, include the CR number."
+      ],
+      "escalation_triggers": [
+        "Multiple users from the same client cannot log in (IdP level issue)",
+        "Redis cache health is AMBER or RED on Operations Dashboard",
+        "User role change requires Admin approval per access policy"
+      ]
+    },
+    {
+      "id": 9,
+      "slug": "account-activation",
+      "title": "Account Activation",
+      "category": "Account & User",
+      "version": "v1.0",
+      "updated": "05 Dec 2024",
+      "description": "Process for verifying and completing KYC and activation steps for accounts in PND (Pending) status.",
+      "preconditions": [
+        "Account is in PND status for > 5 business days or client has escalated",
+        "Do not activate an account until KYC is confirmed complete by the Compliance team"
+      ],
+      "steps": [
+        "Confirm account is in PND status: SELECT id, account_number, status, created_at FROM accounts WHERE account_number = 'ACC-XXXXXX';",
+        "Check KYC steps: SELECT step_name, status, submitted_at, reviewed_at, reviewer_notes FROM kyc_checks WHERE account_id = ? ORDER BY created_at;",
+        "Identify which KYC step is blocking activation. Common blockers: PENDING_DOCUMENT_REVIEW (documents submitted but not yet reviewed), DOCUMENTS_REJECTED (documents require resubmission), AWAITING_DOCUMENTS (client has not yet submitted).",
+        "For AWAITING_DOCUMENTS: notify the client of the specific documents still required, referencing the step_name from kyc_checks.",
+        "For DOCUMENTS_REJECTED: provide the client with the reviewer_notes explaining why documents were rejected and what is needed for resubmission.",
+        "For PENDING_DOCUMENT_REVIEW with submission > 3 business days ago: escalate to the Compliance team to prioritise the review. Do not manually change KYC status.",
+        "Once Compliance confirms all KYC steps are approved: L3 or an Admin user will transition the account from PND to ACT. L2 does not have permissions to change account status directly.",
+        "After activation: confirm the account status is ACT and run a test transaction if the client requests it to verify the account is fully operational."
+      ],
+      "escalation_triggers": [
+        "KYC documents in PENDING_DOCUMENT_REVIEW for > 5 business days",
+        "Client disputes a DOCUMENTS_REJECTED decision (Compliance escalation)",
+        "Account in PND for > 10 business days"
+      ]
+    },
+    {
+      "id": 10,
+      "slug": "limit-configuration-review",
+      "title": "Limit Configuration Review",
+      "category": "Account & User",
+      "version": "v1.2",
+      "updated": "19 Feb 2025",
+      "description": "Guide for retrieving and verifying transaction limit configuration via the Config Service read endpoint.",
+      "preconditions": [
+        "Client reports unexpected DAILY_LIMIT_EXCEEDED or VELOCITY_BREACH declines",
+        "Have the account ID ready"
+      ],
+      "steps": [
+        "Check the account's current effective limits: GET /api/config/account/{account_id}/txn.daily_limit. Note: this returns the account level override if set, or the global default.",
+        "Also check via database: SELECT key, value, scope FROM config_params WHERE account_id = ? OR scope = 'global' ORDER BY scope;",
+        "Identify the active daily limit and velocity settings for the account.",
+        "Check today's transaction total to understand current usage against the limit: SELECT SUM(amount) as daily_total, COUNT(*) as txn_count FROM transactions WHERE account_id = ? AND DATE(created_at) = CURRENT_DATE AND status IN ('AUTHORISED','PROCESSING','SETTLED');",
+        "If a PROCESSING transaction is holding the limit: confirm whether it is genuinely in flight or stuck. A stuck PROCESSING transaction counts against the daily limit until it resolves.",
+        "If the client believes their limit should be higher than configured: check the client's commercial agreement. If the agreement supports a higher limit, raise a Standard Change Request for a config update.",
+        "If the limit was recently changed and the change has not taken effect: check if the Config Service cache needs refreshing. POST /api/config/cache/invalidate (requires Admin role) or wait up to 5 minutes.",
+        "Document the investigation findings in the ticket. If a limit change is appropriate, include the CR reference and expected timeline."
+      ],
+      "escalation_triggers": [
+        "Client's commercial agreement specifies a limit higher than what is configured (Change Request required)",
+        "Config change has been made but has not taken effect after 10 minutes"
+      ]
+    },
+    {
+      "id": 11,
+      "slug": "rbac-permission-audit",
+      "title": "RBAC Permission Audit",
+      "category": "Account & User",
+      "version": "v1.0",
+      "updated": "30 Sep 2024",
+      "description": "Steps for auditing user role assignments and verifying permission sets against the access control matrix.",
+      "preconditions": [
+        "Audit request raised (internal or client initiated)",
+        "Confirm the scope: single user or all users for an account"
+      ],
+      "steps": [
+        "For a single user: SELECT id, name, email, role, status, created_at, last_login FROM users WHERE email = 'user@client.com';",
+        "For all users of a client account: SELECT u.id, u.name, u.email, u.role, u.status, u.last_login FROM users u JOIN account_users au ON au.user_id = u.id WHERE au.account_id = ?;",
+        "Compare each user's role against the access control matrix for the modules they should be able to access.",
+        "Check for any recently changed roles in the audit log: SELECT ts, actor_id, action, old_value, new_value FROM audit_log WHERE entity_type = 'USER' AND action = 'ROLE_CHANGE' AND entity_id IN (SELECT id FROM users WHERE account_id = ?) ORDER BY ts DESC;",
+        "Identify any users with Admin role who should not have it. The Admin role in Fingen grants Config Service access.",
+        "Identify any inactive users (status = INACTIVE or last_login > 90 days ago) who still have active roles. Flag for deprovisioning via a Change Request.",
+        "Compile the audit report: user count, role distribution, any anomalies found, and recommended actions.",
+        "For any role changes required: raise a Standard Change Request specifying the user, current role, and required role with justification."
+      ],
+      "escalation_triggers": [
+        "User found with Admin role who should not have it",
+        "Evidence of role change with no corresponding Change Request in the audit log"
+      ]
+    },
+    {
+      "id": 12,
+      "slug": "report-delivery-failure-investigation",
+      "title": "Report Delivery Failure Investigation",
+      "category": "Batch & Reporting",
+      "version": "v2.4",
+      "updated": "01 Apr 2025",
+      "description": "Investigation procedure for reports that generated successfully but were not received at the delivery destination.",
+      "preconditions": [
+        "Client reports a report was not received",
+        "Confirm the report type, expected date, and delivery method (SFTP/email/API)"
+      ],
+      "steps": [
+        "Find the report record: SELECT report_id, report_type, account_id, scheduled_date, status, delivery_method, generated_at, delivered_at, error_detail FROM reports WHERE account_id = ? AND scheduled_date = '2025-04-14' ORDER BY scheduled_date DESC LIMIT 5;",
+        "Confirm the report was generated (status should be GENERATED or DELIVERING, not GEN_FAILED). If GEN_FAILED: escalate to the Data Platform team, because this is a generation issue, not a delivery issue.",
+        "If status = DELIVERY_FAILED: check the delivery error detail in the reports record or delivery_log.",
+        "For SFTP delivery failures: SELECT delivery_id, sftp_host, sftp_path, error_detail, attempt_count FROM delivery_log WHERE report_id = ? ORDER BY created_at DESC;",
+        "For SFTP: test whether the SFTP host is reachable. Check delivery_config.sftp_host and delivery_config.sftp_user for the account. If credentials look correct, attempt an SFTP test connection.",
+        "Check if SFTP credentials have expired: compare delivery_config.sftp_key_expiry against today's date. If expired: proceed to the SFTP Credential Renewal runbook.",
+        "For webhook/API delivery failures: SELECT event_id, http_status, response_body, attempt_count, last_attempt_at FROM webhook_delivery_log WHERE report_id = ? ORDER BY last_attempt_at DESC LIMIT 5;",
+        "For webhook failures: if http_status is 4xx, the client's endpoint has a config issue. If 5xx, the client's server is returning an error. Share the http_status and response_body with the client for them to investigate their endpoint.",
+        "Once the delivery issue is resolved: manually trigger a retry via POST /api/reports/{report_id}/retry. Confirm the report status reaches DELIVERED.",
+        "Update the ticket and notify the client of delivery confirmation with the timestamp."
+      ],
+      "escalation_triggers": [
+        "status = GEN_FAILED (Data Platform team involvement)",
+        "SFTP connectivity fails from Fingen side after credential check (network/infrastructure issue)",
+        "Report not delivered for 3+ consecutive days"
+      ]
+    },
+    {
+      "id": 13,
+      "slug": "sftp-credential-renewal",
+      "title": "SFTP Credential Renewal",
+      "category": "Batch & Reporting",
+      "version": "v1.1",
+      "updated": "12 Mar 2025",
+      "description": "Steps for verifying, updating, and testing SFTP delivery credentials without impacting live deliveries.",
+      "preconditions": [
+        "SFTP_CREDENTIAL_EXPIRY_7D alert is active, or SFTP delivery is currently failing",
+        "Coordinate with the client: they must provide new SFTP credentials or confirm existing ones",
+        "This is a Standard Change and requires a Change Request"
+      ],
+      "steps": [
+        "Identify the affected account and current SFTP config: SELECT account_id, sftp_host, sftp_user, sftp_key_expiry, sftp_path FROM delivery_config WHERE account_id = ? AND delivery_method = 'SFTP';",
+        "Contact the client's technical contact to confirm whether: (a) they want to rotate the SFTP key, (b) they want to extend the existing key, or (c) they are changing SFTP hosts.",
+        "Raise a Standard Change Request: specify the account_id, current sftp_user, and the change required (new key or new host). Include the client approval reference.",
+        "Once the CR is approved: L3 will update the delivery_config with the new credentials. Do not update delivery_config directly.",
+        "After L3 updates the config: trigger a test delivery via POST /api/reports/test-delivery with the account_id and delivery_method = 'SFTP'.",
+        "Confirm the test delivery succeeded by checking: SELECT status, error_detail FROM delivery_log WHERE account_id = ? AND delivery_type = 'TEST' ORDER BY created_at DESC LIMIT 1;",
+        "If the test fails: check the error_detail. Common issues after credential update: wrong sftp_path (directory doesn't exist on new server), incorrect sftp_user permissions (client side fix required).",
+        "Once confirmed working: notify the client that SFTP delivery is restored. Update the ticket with CR reference and test delivery confirmation."
+      ],
+      "escalation_triggers": [
+        "Client cannot provide new credentials (account delivery suspended)",
+        "Test delivery fails after credential update (L3 to investigate config)"
+      ]
+    },
+    {
+      "id": 14,
+      "slug": "batch-job-monitoring-guide",
+      "title": "Batch Job Monitoring Guide",
+      "category": "Batch & Reporting",
+      "version": "v1.3",
+      "updated": "08 Jan 2025",
+      "description": "Reference guide for BATCH_RUN table status codes, common failure patterns, and batch recovery sequences.",
+      "preconditions": [
+        "Use this runbook as a reference during batch investigations",
+        "Always check batch status before investigating individual transaction or report issues, because a batch failure explains many downstream symptoms"
+      ],
+      "steps": [
+        "Check overall batch health for today: SELECT batch_type, status, total_txns, completed_txns, failed_txns, ROUND((completed_txns * 100.0 / MAX(total_txns, 1)), 1) as success_pct, scheduled_time, end_time FROM batch_runs WHERE DATE(scheduled_time) = CURRENT_DATE ORDER BY scheduled_time;",
+        "BATCH_RUN status reference: SCHEDULED = not yet started; RUNNING = in progress; COMPLETED = all records processed; PARTIAL_COMPLETE = finished with some failures; FAILED = batch did not complete.",
+        "For PARTIAL_COMPLETE: check failed_txns count. If failed_txns < 5% of total_txns: acceptable; investigate individual failures per the Transaction Investigation runbook. If > 5%: raise as P2.",
+        "For FAILED: check error_detail in batch_runs. CLEARING_TIMEOUT and NETWORK_UNAVAILABLE indicate external dependency failure. DB_LOCK_TIMEOUT indicates internal contention; escalate to L3.",
+        "Batch dependency chain: SETTLEMENT must complete before RECON can run. REPORT_GENERATE must complete before REPORT_DELIVER can run. A failure in an upstream batch cascades downstream.",
+        "For a RUNNING batch that has exceeded its expected duration: compare current duration against historical run times: SELECT AVG(JULIANDAY(end_time) - JULIANDAY(start_time)) * 24 * 60 as avg_duration_minutes FROM batch_runs WHERE batch_type = 'SETTLEMENT' AND status = 'COMPLETED' ORDER BY scheduled_time DESC LIMIT 10;",
+        "If a batch is running > 2× its average duration: escalate to L3 with batch_id, current duration, and historical average.",
+        "For GL_POSTING_SWEEP batch failures: immediately notify Finance Operations, because GL errors are compliance impacting.",
+        "After any batch investigation: document findings in the ticket and confirm the Operations Dashboard alert is acknowledged."
+      ],
+      "escalation_triggers": [
+        "SETTLEMENT batch FAILED",
+        "GL_POSTING_SWEEP batch FAILED or PARTIAL_COMPLETE",
+        "Any batch running > 2× its historical average duration"
+      ]
+    },
+    {
+      "id": 15,
+      "slug": "report-re-run-authorisation",
+      "title": "Report Rerun Authorisation",
+      "category": "Batch & Reporting",
+      "version": "v1.0",
+      "updated": "20 Nov 2024",
+      "description": "Approval and execution steps for rerunning reports for a specific date range after investigating the root cause.",
+      "preconditions": [
+        "Root cause of the original report failure has been identified and resolved",
+        "Client has confirmed the date range they need rerun",
+        "Report reruns require Engineering Lead approval (Normal Change)"
+      ],
+      "steps": [
+        "Confirm the original failure is resolved: check that the underlying issue (GEN_FAILED, DELIVERY_FAILED) has been fixed and is not likely to recur.",
+        "Identify the exact reports to rerun: SELECT report_id, report_type, scheduled_date, status FROM reports WHERE account_id = ? AND scheduled_date BETWEEN '2025-01-01' AND '2025-01-07' AND status IN ('GEN_FAILED','DELIVERY_FAILED');",
+        "Raise a Normal Change Request specifying: account_id, report_type, date range, root cause of failure, and confirmation that the root cause is resolved.",
+        "Include the business justification: \"Client requires reports for [date range] for their monthly reconciliation process. Reports failed due to [root cause]. Root cause resolved on [date].\"",
+        "Once the CR is approved by the Engineering Lead: L3 will trigger the report rerun via the admin report generation endpoint.",
+        "Monitor the rerun: SELECT report_id, status, generated_at FROM reports WHERE account_id = ? AND scheduled_date BETWEEN '2025-01-01' AND '2025-01-07' ORDER BY scheduled_date;",
+        "Once all reports show status = GENERATED: confirm delivery is triggered automatically or trigger manually via POST /api/reports/{report_id}/retry for each report.",
+        "Confirm all reports reach DELIVERED status. Notify the client with the delivery confirmation and timestamps.",
+        "Document in the ticket: CR reference, date range rerun, delivery confirmation, and any SLA breach implications."
+      ],
+      "escalation_triggers": [
+        "Root cause is not fully resolved before rerun request (do not rerun until fixed)",
+        "Rerun would generate > 30 days of reports (requires additional capacity planning approval)"
+      ]
+    },
+    {
+      "id": 16,
+      "slug": "downstream-delivery-retry",
+      "title": "Downstream Delivery Retry",
+      "category": "Batch & Reporting",
+      "version": "v1.2",
+      "updated": "25 Feb 2025",
+      "description": "Manual retry procedure for DELIVERY_LOG entries where automated retries have been exhausted.",
+      "preconditions": [
+        "Delivery status is ABANDONED (automated retries exhausted)",
+        "Root cause of delivery failure must be identified before retrying",
+        "Confirm the client's endpoint or SFTP is now reachable before triggering a manual retry"
+      ],
+      "steps": [
+        "Find abandoned deliveries: SELECT delivery_id, event_type, http_status, attempt_count, last_attempt_at, error_detail FROM webhook_delivery_log WHERE account_id = ? AND status = 'ABANDONED' ORDER BY last_attempt_at DESC;",
+        "Investigate the root cause: check the last http_status and error_detail. 4xx = client endpoint config issue (client must fix). 5xx = client server error (client to investigate). Connection timeout = network issue.",
+        "Confirm with the client that their endpoint is now operational before retrying. Ask them to test their endpoint independently if possible.",
+        "For SFTP ABANDONED deliveries: test connectivity. POST /api/integrations/sftp-test with the account_id to run a connectivity check.",
+        "Once the client confirms their endpoint/SFTP is operational: trigger manual retry for each abandoned delivery. POST /api/deliveries/{delivery_id}/retry (requires Support role).",
+        "Monitor retry results: SELECT status, http_status, attempt_count, last_attempt_at FROM webhook_delivery_log WHERE delivery_id = ? ORDER BY last_attempt_at DESC LIMIT 3;",
+        "If retry succeeds (status = DELIVERED): confirm with the client and update the ticket.",
+        "If retry fails again: do not retry more than once without understanding the new failure reason. Review the updated http_status and error_detail before deciding on next steps.",
+        "If the delivery is for a time sensitive event (e.g. settlement confirmation): escalate to L3 for direct delivery investigation."
+      ],
+      "escalation_triggers": [
+        "Manual retry fails after client confirms endpoint is operational",
+        "Abandoned delivery is for a settlement confirmation or compliance related event"
+      ]
+    },
+    {
+      "id": 17,
+      "slug": "integration-gateway-diagnostic",
+      "title": "Integration Gateway Diagnostic",
+      "category": "Integration",
+      "version": "v1.4",
+      "updated": "10 Apr 2025",
+      "description": "Steps for using the Gateway Console to investigate webhook delivery failures and 4xx/5xx error patterns.",
+      "preconditions": [
+        "Webhook delivery failures have been reported or WEBHOOK_DELIVERY_ABANDONED alert is active",
+        "Have the account_id and approximate time range of the failures"
+      ],
+      "steps": [
+        "Check the webhook delivery log: SELECT event_type, http_status, COUNT(*) as count FROM webhook_delivery_log WHERE account_id = ? AND created_at >= DATETIME('now', '-24 hours') GROUP BY event_type, http_status ORDER BY count DESC;",
+        "If HTTP 401 Unauthorized: the webhook endpoint authentication has changed. The client needs to update their endpoint or provide new authentication credentials for the delivery_config.",
+        "If HTTP 404 Not Found: the webhook endpoint URL has changed or been removed. Contact the client to confirm their current webhook endpoint URL and raise a config Change Request.",
+        "If HTTP 429 Too Many Requests: the client's endpoint is being rate limited by Fingen's delivery volume. Reduce delivery frequency or implement batching, and raise a Change Request with the client's agreement.",
+        "If HTTP 5xx: the client's server is returning an internal error. Share the response_body with the client for their investigation. Fingen cannot fix client side 5xx errors.",
+        "If connection timeout: check the client's endpoint availability from your browser or via curl. If unreachable: the client needs to fix their infrastructure. If reachable externally but Fingen cannot reach it: escalate to L3 (network routing issue).",
+        "Check the Integration Gateway health on the Operations Dashboard. If the gateway itself is AMBER or RED: this is a Fingen side issue, so escalate to L3 immediately.",
+        "Check if there is a pattern by event_type: if only TXN_STATUS_CHANGE events are failing but REPORT_DELIVERED events are succeeding, the issue may be related to the payload format for that event type.",
+        "Compile findings: error pattern, HTTP status codes, time range, and whether the issue is Fingen side or client side. Update the ticket and communicate clearly to the client if action is on their side."
+      ],
+      "escalation_triggers": [
+        "Integration Gateway health is AMBER or RED (Fingen side issue)",
+        "All event types failing across multiple clients (gateway level failure)",
+        "TLS handshake failures (certificate issue, which may be the Fingen or the client cert)"
+      ]
+    },
+    {
+      "id": 18,
+      "slug": "cbs-ingestion-failure-response",
+      "title": "CBS Ingestion Failure Response",
+      "category": "Integration",
+      "version": "v1.2",
+      "updated": "03 Mar 2025",
+      "description": "Procedure for assessing impact and escalating Core Banking System data ingestion failures, including P2 triggers.",
+      "preconditions": [
+        "CBS_INGESTION_STALE alert is active or data_ingestion_log shows CBS ingestion failing",
+        "Escalate to L3 immediately if CBS ingestion has been failing for > 30 minutes, because this is a P2 incident"
+      ],
+      "steps": [
+        "Check the ingestion status: SELECT job_id, source, started_at, completed_at, status, records_received, records_loaded, error_count, error_detail FROM data_ingestion_log WHERE source = 'CBS' ORDER BY started_at DESC LIMIT 5;",
+        "Determine how long CBS ingestion has been failing: note the last COMPLETED job timestamp vs current time.",
+        "If failing for > 30 minutes: raise a P2 incident immediately. Escalate to L3 (Integration Engineering, fingen-integration-oncall PagerDuty rotation).",
+        "Assess the impact: if CBS balance data is stale, authorisation decisions are using old balances, which risks overspending or unnecessary declines. Note this in the incident ticket.",
+        "Check the Operations Dashboard for the CBS integration connection status. If the CBS connector shows RED: this is a connectivity issue.",
+        "Do not attempt to fix CBS connectivity directly; the VPN tunnel to CBS is infrastructure managed by L3 and the network team.",
+        "Check if other integrations are also failing (check data_ingestion_log for sources other than CBS). If all integrations are failing, the issue may be the Integration Gateway rather than CBS specifically.",
+        "Communicate to the CSM: \"We are currently experiencing a data ingestion delay affecting balance data. Transaction processing continues but may use slightly stale balance information. Our engineering team is investigating. Next update by [time].\"",
+        "Once L3 resolves the connectivity issue: confirm the next CBS ingestion job completes successfully. Verify the records_loaded count is within normal range."
+      ],
+      "escalation_triggers": [
+        "CBS ingestion failing for > 30 minutes (P2 threshold)",
+        "All data ingestion sources failing (gateway level issue, P2)",
+        "records_loaded = 0 for two consecutive jobs despite no error_detail"
+      ]
+    },
+    {
+      "id": 19,
+      "slug": "webhook-endpoint-validation",
+      "title": "Webhook Endpoint Validation",
+      "category": "Integration",
+      "version": "v1.0",
+      "updated": "14 Jan 2025",
+      "description": "Guide for verifying downstream system webhook endpoint configuration, authentication, and connectivity.",
+      "preconditions": [
+        "Client is setting up a new webhook endpoint or reports that an existing endpoint is not receiving events",
+        "Have the client's webhook URL and authentication method (API key, HMAC signature, Basic Auth)"
+      ],
+      "steps": [
+        "Check the current delivery_config for the account: SELECT webhook_url, webhook_auth_type, webhook_auth_header, webhook_active FROM delivery_config WHERE account_id = ? AND delivery_method = 'WEBHOOK';",
+        "Confirm the webhook_url matches what the client expects. URL must be HTTPS; HTTP endpoints are not supported.",
+        "Send a test webhook event: POST /api/integrations/webhook-test with body {\"account_id\": ?, \"event_type\": \"TEST_EVENT\"}. This triggers a test delivery and returns the HTTP response.",
+        "Check the test delivery result: SELECT http_status, response_body, response_time_ms FROM webhook_delivery_log WHERE event_type = 'TEST_EVENT' AND account_id = ? ORDER BY created_at DESC LIMIT 1;",
+        "If HTTP 200: endpoint is reachable and responding correctly. Confirm with the client that they received the test event.",
+        "If HTTP 401/403: authentication configuration is incorrect. Verify the webhook_auth_type and credential with the client. Raise a Change Request to update the authentication config.",
+        "If HTTP 404: the URL path is incorrect. Confirm the full URL with the client including any path parameters.",
+        "If connection refused or timeout: the client's endpoint is not reachable. Check if the URL resolves via DNS and whether the client's firewall allows inbound connections from Fingen IP ranges (share the Fingen egress IP list from the technical documentation).",
+        "Once the test event is confirmed received by the client: document the test in the ticket and confirm the webhook configuration is validated."
+      ],
+      "escalation_triggers": [
+        "TLS certificate validation failure (certificate chain issue that may require a Fingen cert update)",
+        "Fingen egress IP is being blocked (client firewall change needed)"
+      ]
+    },
+    {
+      "id": 20,
+      "slug": "api-key-rotation",
+      "title": "API Key Rotation",
+      "category": "Integration",
+      "version": "v1.1",
+      "updated": "22 Jan 2025",
+      "description": "Change managed procedure for rotating integration API keys with zero webhook delivery downtime.",
+      "preconditions": [
+        "API key rotation requested by client or triggered by key expiry alert",
+        "This is a Standard Change, so raise a CR before proceeding",
+        "Coordinate with the client on timing to minimise transaction processing disruption"
+      ],
+      "steps": [
+        "Check the current API key: SELECT key_id, api_key_prefix, created_at, expiry_date, is_active, last_used_at FROM api_keys WHERE account_id = ? ORDER BY created_at DESC LIMIT 3;",
+        "Confirm the client is ready for the key rotation: they must update their systems to use the new key within the maintenance window.",
+        "Raise a Standard Change Request specifying: account_id, key_id to be rotated, proposed rotation window, and client approval reference.",
+        "Once the CR is approved: L3 generates the new API key via POST /api/admin/api-keys with the account_id and expiry date.",
+        "L3 provides the new API key to the client via a secure channel (never via email or ticket; use the client's agreed secure key exchange method).",
+        "The client updates their integration to use the new key. Confirm with the client when they have deployed the new key.",
+        "Once the client confirms the new key is active in their system: L3 revokes the old key via POST /api/admin/api-keys/{key_id}/revoke.",
+        "Verify the old key is revoked: SELECT is_active FROM api_keys WHERE key_id = ?; It should return false.",
+        "Monitor the webhook_delivery_log and transaction log for any authentication failures after revocation. A 401 from the client's system after revocation indicates they have not fully deployed the new key.",
+        "Update the ticket with CR reference, key rotation timestamp, and confirmation of successful rotation."
+      ],
+      "escalation_triggers": [
+        "Client reports API key is compromised (treat as an emergency rotation and bypass the standard window)",
+        "Authentication failures spike after new key deployment (client has not fully rolled out new key)"
+      ]
+    },
+    {
+      "id": 21,
+      "slug": "p1-incident-response",
+      "title": "P1 Incident Response",
+      "category": "Incident Management",
+      "version": "v3.1",
+      "updated": "15 Apr 2025",
+      "description": "Full P1 response procedure: initial triage, notification chain, war room coordination, and executive communication.",
+      "preconditions": [
+        "A P1 incident has been declared (platform wide outage or data integrity breach)",
+        "P1 response must begin within 15 minutes of detection",
+        "The L2 engineer who detects the P1 owns coordination until the Engineering Manager takes command"
+      ],
+      "steps": [
+        "Immediately acknowledge the alert in PagerDuty. This stops the escalation chain from paging additional people while you triage.",
+        "Confirm the P1 classification: verify the Operations Dashboard shows platform wide impact (multiple services RED, or 100% transaction failure rate, or data integrity alert).",
+        "Page the on call L3 Engineer via PagerDuty rotation fingen-payments-oncall. Do not wait: page immediately upon P1 confirmation.",
+        "Notify the Engineering Manager via phone (not Slack; call the mobile number in the escalation matrix). State: \"P1 incident, [description], detected at [time], [number] of clients affected.\"",
+        "Notify the Client Success Director by the same method within 5 minutes of Engineering Manager notification.",
+        "Open the war room Slack channel: #incident-YYYYMMDD-p1. Post the initial incident declaration: \"P1 DECLARED: [time]. [Description]. Engineering investigating. Next update in 15 min.\"",
+        "Provide L3 with: full Operations Dashboard screenshot, relevant log excerpts, error codes, and the time the issue started.",
+        "Update the war room Slack channel every 15 minutes with: current status, what has been tried, current hypothesis, and ETA to resolution (if known).",
+        "Do NOT communicate directly with clients during a P1. All client communication is managed by the Client Success Director using approved templates.",
+        "If the P1 is unresolved at 30 minutes: notify the CTO via phone. State current status and ETA.",
+        "Once resolved: post a resolution notice in the war room. Confirm all services are GREEN on the Operations Dashboard. Notify the Engineering Manager and Client Success Director.",
+        "Initiate the Post Incident Review process within 24 hours."
+      ],
+      "escalation_triggers": [
+        "P1 unresolved at 30 minutes: CTO notification required",
+        "Data integrity breach confirmed: Legal and Compliance must also be notified immediately"
+      ]
+    },
+    {
+      "id": 22,
+      "slug": "p2-incident-response",
+      "title": "P2 Incident Response",
+      "category": "Incident Management",
+      "version": "v2.2",
+      "updated": "28 Feb 2025",
+      "description": "Scoped response for major feature outages: investigation steps, escalation timelines, and client communication templates.",
+      "preconditions": [
+        "A P2 incident has been declared (major feature unavailable, multiple clients affected)",
+        "P2 response must begin within 30 minutes of detection"
+      ],
+      "steps": [
+        "Acknowledge the alert or ticket. Confirm P2 classification: a major feature is unavailable for multiple clients but core payment processing continues.",
+        "Post in Slack #incidents: \"P2 INVESTIGATING: [time]. [Feature] is unavailable for [number] clients. L2 investigating. Next update by [time + 30 min].\"",
+        "Notify the Engineering Lead via Slack direct message (not page). State the issue and current status.",
+        "Begin investigation: check the Operations Dashboard for which service is affected. Pull service logs for ERROR entries in the incident window.",
+        "Check whether a recent deployment or config change may have triggered the issue: check the Change Register for changes in the last 2 hours.",
+        "If the root cause is identified and a fix exists within L2 runbooks: apply the fix, document each step in the ticket.",
+        "If L3 is required: notify the Engineering Lead who will engage L3. Provide full investigation summary (what was checked, error codes, hypothesis, runbook step if applicable).",
+        "Update Slack #incidents every 30 minutes with status, current hypothesis, and estimated resolution time.",
+        "If unresolved at 1 hour: notify the Engineering Manager and Client Success Manager.",
+        "Coordinate client communication via the Client Success Manager and do not contact clients directly. Provide the CSM with a technical status summary they can translate for clients.",
+        "Once resolved: confirm the affected feature is operational, post resolution in #incidents, and notify the Engineering Lead. Initiate a PIR if the P2 involved data issues or > 1 hour downtime."
+      ],
+      "escalation_triggers": [
+        "P2 unresolved at 1 hour: Engineering Manager and CSM notification required",
+        "P2 scope expands to include payment processing: reclassify to P1 immediately"
+      ]
+    },
+    {
+      "id": 23,
+      "slug": "post-incident-review-template",
+      "title": "Post Incident Review Template",
+      "category": "Incident Management",
+      "version": "v2.0",
+      "updated": "10 Dec 2024",
+      "description": "Structured PIR template covering incident timeline, root cause, contributing factors, impact, and action items.",
+      "preconditions": [
+        "Incident is fully resolved",
+        "P1 PIR: complete within 24 hours. P2 PIR: complete within 48 hours",
+        "PIR Owner is the L2 engineer who led the incident response"
+      ],
+      "steps": [
+        "Create a PIR document using the standard template in Confluence (search \"PIR Template\"). Title format: \"PIR [YYYY-MM-DD]: [Incident Title] ([Severity])\".",
+        "Section 1 (Incident Summary): incident_id, date/time of first detection, date/time of resolution, total duration, severity, number of clients affected, number of transactions impacted.",
+        "Section 2 (Timeline): reconstruct a minute by minute timeline from: PagerDuty alert timestamps, Slack #incidents posts, ticket updates, and audit_log entries. Do not rely on memory; use the logged timestamps.",
+        "Section 3 (Root Cause): state the confirmed technical root cause. Format: \"The [component] failed because [specific reason]. This caused [downstream effect].\" If root cause is not yet 100% confirmed, state it as \"Suspected root cause (confirmation pending L3 investigation).\"",
+        "Section 4 (Contributing Factors): list factors that made the incident worse or harder to detect. Examples: \"Monitoring alert threshold was set too high, so we did not detect the issue until impact was significant.\" or \"No runbook existed for this specific error code.\"",
+        "Section 5 (Client Impact): list each affected client account, the feature they lost access to, and the duration of impact. Note any SLA breaches.",
+        "Section 6 (What Went Well): list things that worked well. Examples: \"PagerDuty alert fired correctly and was acknowledged within 5 minutes.\" \"L3 had a fix ready within 20 minutes.\"",
+        "Section 7 (Action Items): for each contributing factor, create a specific, measurable action item with an owner and a due date. Format: \"Action: [what]. Owner: [name/team]. Due: [date]. Acceptance: [how we will know it is done].\"",
+        "Section 8 (Runbook Updates): were any runbooks unclear, incorrect, or missing? Raise a runbook change request for each gap identified.",
+        "Share the draft PIR with the Engineering Lead for review. Publish to Confluence after review. Share the action items with the Engineering backlog."
+      ],
+      "escalation_triggers": [
+        "PIR cannot be completed within the timeline (notify Engineering Manager)",
+        "Root cause involves a data integrity issue (Legal and Compliance must review the PIR before publication)"
+      ]
+    },
+    {
+      "id": 24,
+      "slug": "client-communication-templates",
+      "title": "Client Communication Templates",
+      "category": "Incident Management",
+      "version": "v1.5",
+      "updated": "05 Mar 2025",
+      "description": "Approved templates for P1/P2 status updates, SLA breach notifications, and resolution communications.",
+      "preconditions": [
+        "All client communication during P1/P2 incidents is managed by the Client Success Manager (CSM)",
+        "L2 engineers provide technical summaries to the CSM; do not use these templates to contact clients directly",
+        "Templates must be used verbatim; do not customise without CSM approval"
+      ],
+      "steps": [
+        "TEMPLATE 1: Initial Acknowledgement (send within SLA response window): \"Dear [Client Name], We are writing to inform you that we are currently investigating an issue affecting [feature description]. Our engineering team is actively working to resolve this. We will provide an update by [time]. Reference: [incident_id].\"",
+        "TEMPLATE 2: Status Update (send every 30 min during P1, every hour during P2): \"Dear [Client Name], This is an update on incident [incident_id]. Current status: [Investigating / Identified / Monitoring]. [One sentence on what we know]. Our next update will be by [time].\"",
+        "TEMPLATE 3: Resolution Notice: \"Dear [Client Name], We are pleased to confirm that the issue affecting [feature description] has been resolved as of [time UTC]. All services are now operating normally. A full Root Cause Analysis will be shared within 24 hours. We apologise for the inconvenience.\"",
+        "TEMPLATE 4: SLA Breach Notification: \"Dear [Client Name], We regret to inform you that incident [incident_id] has resulted in a breach of the [SLA metric] service level agreement. The breach occurred from [start time] to [end time] ([duration]). A formal SLA report and remediation plan will be provided within 48 hours.\"",
+        "TEMPLATE 5: RCA Share (post incident): \"Dear [Client Name], Please find attached the Root Cause Analysis for incident [incident_id] dated [date]. This document outlines the cause, timeline, impact, and preventive actions we have put in place to prevent recurrence.\"",
+        "For all templates: replace [bracketed placeholders] before sending. Do not include: internal system names (CBS, batch IDs), specific engineer names, or speculative root cause language.",
+        "Before sending any template: get sign off from the Engineering Lead for P1 initial acknowledgements, and from the Engineering Manager for SLA breach notifications.",
+        "Log every client communication in the incident ticket with the timestamp and the name of the person who sent it."
+      ],
+      "escalation_triggers": [
+        "Client demands direct communication with an engineer (escalate request to Engineering Manager)",
+        "Client initiates legal action or formal complaint (Legal team must be involved immediately)"
+      ]
+    },
+    {
+      "id": 25,
+      "slug": "escalation-matrix-quick-reference",
+      "title": "Escalation Matrix Quick Reference",
+      "category": "Incident Management",
+      "version": "v3.0",
+      "updated": "12 Apr 2025",
+      "description": "One page reference for on call contacts, escalation thresholds, and PagerDuty routing by service area and severity.",
+      "preconditions": [
+        "Use this runbook as a quick reference during active incidents",
+        "Always escalate based on impact, not on certainty. If you are unsure whether it is a P1, escalate and let the Engineering Manager make the call"
+      ],
+      "steps": [
+        "STEP 1: Classify the incident severity using the Incident Classification runbook. If in doubt between P1 and P2: treat as P1.",
+        "P1 CONTACTS: On call L3 → PagerDuty (fingen-payments-oncall). Engineering Manager → [mobile number in Vault]. Client Success Director → [mobile in Vault]. CTO if unresolved at 30 min → [mobile in Vault].",
+        "P2 CONTACTS: Engineering Lead → Slack @eng-lead. Engineering Manager if unresolved at 1 hour. Client Success Manager → Slack @csm.",
+        "P3/P4 CONTACTS: L3 ticket queue. Engineering Lead if unresolved beyond SLA.",
+        "SERVICE AREA ROUTING: Transactions/Settlement → fingen-payments-oncall. Reporting/Delivery → fingen-data-oncall. Integration/CBS → fingen-integration-oncall. Account/User → fingen-platform-oncall. GL/Finance → fingen-finance-oncall.",
+        "ESCALATION TIMING: P1: page immediately, do not wait. P2: notify within 30 minutes. P3: notify within 3 hours if unresolved. P4: notify next business day if unresolved.",
+        "COMMUNICATION RULE: Never contact the client directly during P1/P2; all external communication goes through the Client Success Manager. L2 → CSM only.",
+        "WHEN TO RECLASSIFY UPWARDS: if a P2 expands to affect payment processing → P1. If a P3 affects multiple clients → P2. Reclassify immediately and restart the notification chain.",
+        "WHEN NOT TO ESCALATE: P4 issues should not be escalated to L3 outside business hours. Known issues with an existing workaround documented in a runbook do not require L3 escalation."
+      ],
+      "escalation_triggers": [
+        "Any P1: escalate immediately without waiting for further confirmation",
+        "Any incident where data integrity is in question: escalate to P1 regardless of client count"
+      ]
+    }
+  ]
+}

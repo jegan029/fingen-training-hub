@@ -1,0 +1,46 @@
+.page {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-7);
+  font-family: var(--font-sans);
+  color: var(--color-text);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font: 700 var(--text-xl) / 1.2 var(--font-display);
+  color: var(--color-heading);
+}
+
+.lead {
+  margin: 0 0 var(--space-5);
+  color: var(--color-text-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.table th {
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.table a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

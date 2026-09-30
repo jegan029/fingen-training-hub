@@ -1,0 +1,555 @@
+/*
+ * Home page. Motion rules: only transform and opacity animate (exceptions: the progress ring's
+ * stroke offset and the count-up text, both paint only); 150 to 700ms; everything is static under
+ * prefers-reduced-motion (global rule in tokens.css plus the overrides at the end of this file).
+ */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Hero ───────────────────────────────────── */
+.hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.heroArt {
+  position: absolute;
+  inset: 0 0 0 50%;
+  background: #020b5b;
+}
+
+.heroImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: right center;
+  display: block;
+}
+
+.heroPreview {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-5);
+}
+
+.heroPreview svg {
+  width: min(360px, 80%);
+}
+
+.heroInner {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 460px;
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-7) var(--space-7) var(--space-7) 0;
+}
+
+.heroEyebrow {
+  margin: 0 0 var(--space-3);
+  font: 700 var(--text-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.heroTitle {
+  margin: 0 0 var(--space-4);
+  font: 700 2.5rem / 1.1 var(--font-display);
+  color: var(--color-accent);
+}
+
+.heroDesc {
+  margin: 0 0 var(--space-5);
+  font: 400 var(--text-md) / 1.7 var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Staggered entrance for the headline block. */
+.enter {
+  animation: rise 600ms var(--ease-out) calc(var(--i) * 90ms) both;
+}
+
+/* ── Stats strip ────────────────────────────── */
+.stats {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space-5);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--color-accent);
+}
+
+.statValue {
+  font: 700 2rem / 1.1 var(--font-display);
+  color: var(--color-heading);
+  /* Fixed-width digits: counting up never shifts the layout. */
+  font-variant-numeric: tabular-nums;
+  min-width: 4ch;
+}
+
+.statLabel {
+  font: 600 var(--text-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ── Featured tile ──────────────────────────── */
+.tile {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.tile:not([data-visible]) {
+  opacity: 0;
+}
+.tile[data-visible] {
+  animation: rise 600ms var(--ease-out) backwards;
+}
+
+.tileImg {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.tileImg img,
+.cardImg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 450ms var(--ease-out);
+}
+
+.tileImg:hover img,
+.tileImg:focus-visible img {
+  transform: scale(1.04);
+}
+
+.tileImg picture,
+.cardImg picture {
+  display: contents;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  font: 700 var(--text-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.tileTitle {
+  margin: 0 0 var(--space-2);
+  font: 700 1.15rem / 1.3 var(--font-display);
+  color: var(--color-heading);
+}
+
+.tileDesc {
+  margin: 0 0 var(--space-3);
+  font: 400 var(--text-sm) / 1.65 var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+.learnMore {
+  font: 600 var(--text-sm) / 1.4 var(--font-sans);
+  color: var(--color-accent);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.learnMore:hover {
+  border-bottom-color: var(--color-accent);
+}
+
+/* ── Card grids ─────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-5);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+  color: inherit;
+  transition:
+    transform 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+
+/* Scroll reveal: cards rise in once, one after another. */
+.grid:not([data-visible]) .card {
+  opacity: 0;
+}
+.grid[data-visible] .card {
+  animation: rise 550ms var(--ease-out) calc(var(--i) * 100ms) backwards;
+}
+
+.card:hover,
+.card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.card:hover .cardImg img,
+.card:focus-visible .cardImg img {
+  transform: scale(1.05);
+}
+
+.card:hover .cardTitle {
+  color: var(--color-accent);
+}
+
+.cardImg {
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.cardBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-4);
+}
+
+.cardTitle {
+  margin: 0 0 var(--space-2);
+  font: 700 1rem / 1.3 var(--font-display);
+  color: var(--color-heading);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.cardDesc {
+  flex: 1;
+  margin: 0 0 var(--space-3);
+  font: 400 var(--text-sm) / 1.6 var(--font-sans);
+  color: var(--color-text-muted);
+}
+
+.cardLink {
+  font: 600 var(--text-sm) / 1.4 var(--font-sans);
+  color: var(--color-accent);
+}
+
+.more {
+  margin-top: var(--space-5);
+}
+
+/* ── Your progress ──────────────────────────── */
+.profile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ring {
+  flex-shrink: 0;
+}
+.ringTrack {
+  fill: none;
+  stroke: var(--color-surface-2);
+  stroke-width: 8;
+}
+.ringValue {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 8;
+  stroke-linecap: round;
+  /* Paint-only: the ring's stroke offset animates; nothing moves or resizes. */
+  transition: stroke-dashoffset 700ms var(--ease-out);
+}
+.ringText {
+  fill: var(--color-heading);
+  font: 700 15px var(--font-sans);
+}
+
+.profileText {
+  flex: 1;
+  min-width: 180px;
+}
+
+.profileName {
+  margin: 0;
+  font: 700 var(--text-md) / 1.3 var(--font-sans);
+  color: var(--color-heading);
+}
+
+.profileRole {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.profileActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  font: 600 var(--text-xs) / 1.4 var(--font-sans);
+  color: var(--color-warning);
+}
+
+/* "Continue where you left off": fixed height so it does not shift the page when it fills in. */
+.continue {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 88px;
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+}
+
+.continueIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.continueText {
+  flex: 1;
+  min-width: 0;
+}
+
+.continueLabel {
+  margin: 0;
+  font: 700 var(--text-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.continueTitle {
+  margin: var(--space-1) 0 0;
+  font: 700 var(--text-md) / 1.3 var(--font-sans);
+  color: var(--color-heading);
+}
+
+.continueMeta {
+  margin: 2px 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.continueSkeleton {
+  min-height: 88px;
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+@media (max-width: 600px) {
+  .continue {
+    flex-wrap: wrap;
+  }
+}
+
+.pathGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-4);
+}
+
+.pathCard {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: inherit;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+
+.pathCard:hover,
+.pathCard:focus-visible {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.pathHead {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.pathTitle {
+  font-weight: 700;
+  color: var(--color-heading);
+}
+.pathCount {
+  color: var(--color-text-muted);
+}
+
+.bar {
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.pathPct {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ── Call to action ─────────────────────────── */
+.cta {
+  background: #020b5b;
+  color: #ffffff;
+  padding: var(--space-6) var(--space-5);
+}
+
+.ctaInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.ctaTitle {
+  margin: 0 0 var(--space-1);
+  font: 700 1.4rem / 1.3 var(--font-display);
+  color: #ffffff;
+}
+
+.ctaText {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ── Small screens ──────────────────────────── */
+@media (max-width: 900px) {
+  .heroArt {
+    position: relative;
+    inset: auto;
+    height: 340px;
+  }
+  .hero {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+  .heroInner {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+  .heroContent {
+    padding: var(--space-6) 0;
+  }
+  .heroTitle {
+    font-size: 2rem;
+  }
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .tile,
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Reduced motion: show everything in its final state straight away. */
+@media (prefers-reduced-motion: reduce) {
+  .enter,
+  .tile,
+  .grid .card,
+  .heroPreview * {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .card:hover,
+  .card:focus-visible,
+  .pathCard:hover,
+  .card:hover .cardImg img,
+  .tileImg:hover img {
+    transform: none;
+  }
+}

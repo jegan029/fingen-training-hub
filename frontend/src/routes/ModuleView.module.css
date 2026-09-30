@@ -1,0 +1,129 @@
+.page {
+  min-height: 100%;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  padding: var(--space-5) var(--space-4) var(--space-7);
+}
+
+.header {
+  max-width: 880px;
+  margin: 0 auto var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.back:hover {
+  color: var(--color-accent);
+}
+
+.title {
+  margin: 0;
+  font: 700 var(--text-xl) / 1.2 var(--font-display);
+  color: var(--color-heading);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
+}
+
+.progress {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progressText {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+
+.bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  transition: width var(--duration-slow) var(--ease-out);
+}
+
+.counters {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.counters li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  font: 600 var(--text-xs) / 1.6 var(--font-sans);
+}
+
+.body {
+  position: relative;
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+/* Legend above the canvas: the canvas uses the full width, so a floating corner legend would cover subtopics. */
+.legend {
+  max-width: 880px;
+  margin: 0 auto var(--space-4);
+}
+
+.error {
+  max-width: 880px;
+  margin: 0 auto var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+.skeletonNode {
+  width: 240px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}

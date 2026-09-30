@@ -1,0 +1,108 @@
+.preview {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  height: auto;
+  filter: drop-shadow(0 18px 40px rgba(2, 11, 91, 0.35));
+}
+
+.card {
+  fill: var(--color-surface);
+  stroke: var(--color-border);
+}
+.bar {
+  fill: var(--color-surface-2);
+}
+.dot {
+  fill: var(--color-border-strong);
+}
+.barText {
+  fill: var(--color-text-muted);
+  font: 600 12px var(--font-sans);
+}
+
+/* Spine draws from the top. */
+.spine {
+  fill: var(--rm-line);
+  transform-box: fill-box;
+  transform-origin: top;
+  animation: draw 700ms var(--ease-out) 100ms both;
+}
+
+.branch {
+  fill: none;
+  stroke: var(--rm-line-muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+.pill {
+  fill: var(--rm-sub-bg);
+  stroke: var(--rm-sub-border);
+}
+.pillLine {
+  fill: var(--color-border-strong);
+}
+
+.node {
+  fill: var(--rm-main-bg);
+  stroke: var(--rm-main-border);
+  stroke-width: 2;
+}
+.nodeText {
+  fill: var(--rm-main-text);
+  font: 700 12px var(--font-sans);
+}
+
+/* Topics pop in one by one. */
+.pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop 450ms var(--ease-out) var(--delay) both;
+}
+
+/* The done state is a layer that fades in over the node (opacity only). */
+.done {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pop 400ms var(--ease-out) var(--delay) both;
+}
+.doneFill {
+  fill: var(--rm-done-bg);
+  stroke: var(--rm-done-border);
+  stroke-width: 2;
+}
+.doneText {
+  fill: var(--color-text-muted);
+  font: 700 12px var(--font-sans);
+  text-decoration: line-through;
+}
+.check {
+  fill: var(--color-success);
+}
+.checkMark {
+  fill: none;
+  stroke: var(--color-surface);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes draw {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

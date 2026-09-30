@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+backend/app/data/app.db
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Logs
+*.log
+
+# IDE / tools
+.vscode/
+.DS_Store
+.claude/
+
+
+# Secrets
+.env
+
+# Test output
+frontend/playwright-report/
+frontend/test-results/
+.ruff_cache/

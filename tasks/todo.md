@@ -1,0 +1,92 @@
+# Todo: enhancement brief
+
+Plan: see approved plan (Phases 1 to 6). Branch: `feature/roadmap-redesign-and-hardening`.
+
+## Phase 1: Security review and fixes
+- [x] Fix tsconfig so `npm run build` passes
+- [x] Settings: APP_ENV, APP_SECRET_KEY, CORS_ORIGINS, seed password vars; remove DEFAULT_USER_ID
+- [x] DB: connection() context manager, PRAGMA user_version migrations, timezone aware datetimes
+- [x] Auth: argon2id, JWT httpOnly cookie, get_current_user / require_admin, /auth/me, /auth/logout
+- [x] CSRF header check on state changing requests
+- [x] Remove client supplied user_id everywhere; per user progress/assessments
+- [x] Seed accounts only in development, passwords from env or generated
+- [x] Login rate limit + lockout, EmailStr, password length
+- [x] LLM: input limits, per user rate limits, delimited user input, allowlisted category, no raw errors
+- [x] Security headers, CORS from env, docs off in production, lifespan handler
+- [x] Frontend: AuthContext via /auth/me, no role in localStorage, api.ts without user_id
+- [x] XSS: Markdown component with rehype-sanitize; zero dangerouslySetInnerHTML
+- [x] Self host fonts
+- [x] Dependency upgrades, pip-audit, npm audit, gitleaks, bandit
+- [x] SECURITY_REVIEW.md incl. brand audit (rebrand awaits approval)
+- [x] pytest security tests + Vitest XSS test
+- [x] Phase gate: backend runs, build passes, tests pass, commit
+
+### Phase 1 review
+- 39 backend tests + 2 Vitest tests pass; `npm run build` clean; pip-audit/bandit/gitleaks clean; npm audit 0 high/critical.
+- Deviation: legacy SHA-256 hashes are deleted by migration (not rehashed on login) so `admin123` stops working.
+- Analytics is now cohort level (admin only) instead of user 1's progress.
+- Waiting on: rebrand decision (SECURITY_REVIEW.md, Brand audit).
+
+## Phase 2: Roadmap redesign
+- [x] FinGen rebrand (approved), startup content sync
+- [x] Runbooks into dataset + API, approved node links (43)
+- [x] Subtopics from `## ` headings at seed time (+ tests)
+- [x] Node status (pending/in_progress/done/skipped), migration from `completed`, PUT endpoint, lock rules
+- [x] Tokens, light/dark theme, toggle; CSS Modules for new components
+- [x] Roadmap canvas (hand-rolled layout), drawer, legend, mobile list/bottom sheet, keyboard nav
+- [x] Paths listing grouped Role/Skill based with lucide icons
+- [x] Runbook deep links, chat prefill
+- [x] Tests: 65 pytest, 26 vitest; build clean; audits clean
+- [ ] Remaining inline-style pages migrate to CSS modules as they are reworked (Home in Phases 3/4, others in Phase 6)
+
+### Phase 2 review
+- Prerequisite arcs only for the active node: drawing all needed up to 9 lanes and overlapped subtopics.
+- Cross-path prerequisite (node 20 needs node 5) shown in the drawer with a link, not on the canvas.
+- Locked nodes: readable; only Reset allowed until prerequisites are done or skipped (server enforced, 409).
+## Phase 3: Home page images
+- [x] Shortlist with verified licences; picks confirmed (hero, L2, analytics revised after viewing the photos)
+- [x] 4 Pexels photos cropped and converted to AVIF/WebP at 400/800/1200 (all under 65 KB)
+- [x] 3 original SVGs: hero data flow, transaction flow, AI tutor
+- [x] `<picture>` with srcset/sizes, lazy loading (hero eager), explicit width/height, alt text
+- [x] CREDITS.md, /credits page, footer link; CSP img-src 'self'; favicon; removed stray public/index.html
+- [x] Tests: 31 vitest; production build under CSP: no external requests, no console errors
+
+## Phase 4: Home page animation
+- [x] Pure CSS + useInView/useCountUp hooks (no animation library)
+- [x] Hero roadmap preview: spine draws, topics pop in, two turn done
+- [x] Staggered headline entrance, count-up stats strip, scroll reveal cards/tile, card hover and focus lift + image zoom
+- [x] Progress ring animates to the real value
+- [x] prefers-reduced-motion: everything static and visible (verified in Brave)
+- [x] Home page moved to a CSS module (follows dark mode); white CTA button contrast fixed
+- [x] Fixed CLS 0.58 → 0.014: topbar/footer hidden until the auth check resolves
+- [x] Lighthouse (production preview, logged in): mobile 90/100/100 (3 runs), desktop 100/100/100
+- Skipped optional ambient background motion: it would need a loop longer than 700ms; the static hero art already covers it.
+
+## Phase 5: Remove dashes
+- [x] scripts/check_no_dashes.py (dataset display fields, TSX/TS text, backend strings, index.html; skips code, SQL, comments, list markers) + pytest wrapper
+- [x] Dataset: 284 dashes removed (84 term colons, 6 ranges to "to", 40 label rules, 151 sentence rewrites); 228 compounds rewritten
+- [x] UI: 4 dashes, 11 compounds
+- [x] Verified: 75 code/SQL spans byte identical; slugs unchanged; 0 em/en dashes in the API; lesson and runbook pages checked in Brave
+
+## Phase 6: Additional improvements
+- [x] 6.2 Ctrl+K command palette over `GET /api/search`
+- [x] 6.7 `GET /api/progress/summary` (streak, continue where you left off) + server side `GET /api/certificate` (CERT_MIN_AVG_SCORE)
+- [x] 6.8 Admin "weakest topics" table (demo persona scores seeded in development)
+- [x] 6.9 ErrorBoundary, skeletons, empty and error states, 404 page
+- [x] 6.10 React.lazy per route + bundle size report
+- [x] Migrate remaining inline-style pages to CSS modules (dark mode)
+- [x] 6.6 LLM provider abstraction (openai_compatible, anthropic, offline)
+- [x] 6.4 ruff, ESLint, Prettier, pre-commit (formatting in its own commit)
+- [x] 6.3 Playwright e2e + GitHub Actions CI
+- [x] 6.5 Dockerfiles (non-root backend, nginx frontend with full CSP + gzip), docker-compose
+- [x] README.md, CLAUDE.md, .env.example, SECURITY_REVIEW.md
+- [x] Phase gate: backend runs, build passes, all tests pass, commit
+
+### Phase 6 review
+- Tests: 89 pytest, 43 Vitest, 2 Playwright (Brave, isolated backend with the offline provider). ruff, ESLint (0 warnings), Prettier, tsc clean. pip-audit, bandit, gitleaks (history) clean; npm audit: only the known react-router moderate (S15).
+- Bundle: one 420 kB JS file (128 kB gzip) became a 211 kB initial load (70 kB gzip); react-markdown (48 kB gzip) now loads only with lesson, chat and assessment pages.
+- Lighthouse, home, production preview: mobile 93/100/100 (3 runs, was 90), desktop 100/100/100.
+- Docker: both images built and run; containers non-root; CSP, gzip and login verified through nginx.
+- New finding S28 (client IP behind the reverse proxy) fixed: nginx overwrites X-Forwarded-For.
+- Anthropic provider is covered by request shape tests only; no Anthropic key was available for a live call. The NVIDIA path was verified live after the refactor (chat and a JSON evaluation).
+- The GitHub Actions workflow has not run yet (nothing pushed).
