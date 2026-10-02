@@ -1,0 +1,89 @@
+# ServiceNow to Training Hub field mapping. Validated at startup (app/integrations/servicenow/mapping.py);
+# an unknown key or a missing required field stops the app with a clear error.
+#
+# Every field name below is an ASSUMPTION based on the standard kb_knowledge table until it is
+# confirmed against a sanitised sample payload from the target instance. Lines marked (A) are guesses.
+# Never put instance URLs, sys_ids of real knowledge bases, credentials or client names in this file.
+
+version: 1
+
+# Table API source. The sync adds "^sys_updated_on>{watermark}^ORDERBYsys_updated_on" itself.
+source_table: kb_knowledge
+# (A) Only published articles in the selected knowledge bases. Replace the placeholder sys_ids.
+encoded_query: "workflow_state=published^kb_knowledge_baseIN00000000000000000000000000000001,00000000000000000000000000000002"
+# workflow_state values that count as live. Anything else (retired, outdated, draft) is retired on full sync.
+published_states: [published]
+
+# read: value (raw value, e.g. a sys_id), display (display value, e.g. a name), both.
+fields:
+  sys_id: {name: sys_id}
+  number: {name: number}                                  # KB0012345
+  title: {name: short_description}
+  body_html: {name: text}                                 # HTML body; stored raw, rendered only after sanitising
+  summary: {name: meta_description}                       # (A) optional; first paragraph of the body otherwise
+  knowledge_base: {name: kb_knowledge_base, read: both}
+  category: {name: kb_category, read: both}
+  article_type: {name: article_type}                      # (A) html / wiki, or a custom type field
+  workflow_state: {name: workflow_state}
+  version: {name: version, read: display}
+  valid_to: {name: valid_to}
+  updated_on: {name: sys_updated_on}
+
+classification:
+  source: field                                           # field | category
+  field: {name: u_classification, read: display}          # (A) custom choice field
+  # Source value (case and spacing ignored) to internal level. Unmapped or empty values are restricted.
+  values:
+    Public: public
+    Internal: internal
+    Internal Use Only: internal
+    Confidential: confidential
+    Restricted: restricted
+    Highly Restricted: restricted
+
+applications:
+  # article_fields: number and name are fields on the article itself
+  # cmdb_ci:        the article's cmdb_ci reference points at a business application or service
+  # m2m:            the many to many article to CI relationship table
+  mode: article_fields
+  article_fields:                                         # (A)
+    number: {name: u_application_number}
+    name: {name: u_application_name}
+  cmdb_ci:                                                # (A)
+    field: {name: cmdb_ci, read: both}
+    ci_table: cmdb_ci_business_app
+    number_field: number
+    name_field: name
+    description_field: short_description
+  m2m:                                                    # (A)
+    table: m2m_kb_ci
+    article_field: kb_knowledge
+    ci_field: cmdb_ci
+    ci_table: cmdb_ci_business_app
+    number_field: number
+    name_field: name
+    description_field: short_description
+
+# Which articles appear in the Runbook Library. Matched case insensitively against these fields.
+types:
+  match_on: [category, article_type]
+  runbook: [Runbook, Runbooks]
+  sop: [SOP, Standard Operating Procedure, Standard Operating Procedures]
+
+documents:
+  include_attachments: true
+  include_linked_articles: true
+  # Subset of the hard allowlist (pdf, docx, xlsx, pptx, txt, png, jpg). The size limit is SERVICENOW_MAX_DOC_MB.
+  allowed_types: [pdf, docx, xlsx, pptx, txt, png, jpg]
+
+# Links from articles to roadmap nodes (admins can add manual links too).
+node_links:
+  by_application:                                         # application number to node ids
+    APP-1001: [4, 15]                                     # synthetic demo apps (fixtures)
+    APP-1002: [11, 12]
+    APP-1003: [16, 17]
+    APP-1004: [2, 29]
+  by_keyword:                                             # word in the title or category to node ids
+    settlement: [13]
+    reconciliation: [14]
+    escalation: [26]

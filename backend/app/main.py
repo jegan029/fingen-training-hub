@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from .config import CORS_ORIGINS, IS_DEV, logger
 from .db import init_db
+from .integrations.servicenow.config import load_config as load_servicenow_config
 from .routers import admin, analytics, assessment, auth, certificate, chat, progress, roadmap, runbooks, search
 from .security import (
     CSRF_HEADER,
@@ -23,7 +24,9 @@ logging.basicConfig(level=logging.INFO)
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI):
+async def lifespan(app: FastAPI):
+    # Fails fast on an invalid ServiceNow mapping, before anything else starts.
+    app.state.servicenow = load_servicenow_config()
     init_db()
     yield
 

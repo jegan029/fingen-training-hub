@@ -90,3 +90,51 @@ Plan: see approved plan (Phases 1 to 6). Branch: `feature/roadmap-redesign-and-h
 - New finding S28 (client IP behind the reverse proxy) fixed: nginx overwrites X-Forwarded-For.
 - Anthropic provider is covered by request shape tests only; no Anthropic key was available for a live call. The NVIDIA path was verified live after the refactor (chat and a JSON evaluation).
 - The GitHub Actions workflow has not run yet (nothing pushed).
+
+## ServiceNow knowledge integration (branch feature/servicenow-knowledge)
+Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker's patterns; local content is `internal` (fail closed applies to synced content only); the probe moves to Phase 2; the AI Tutor sends only the selected article. Field names in `mapping.yaml` are assumptions until a sanitised sample payload is provided.
+
+### Phase 1: Mapping and config
+- [x] `integrations/servicenow/settings.py`: every SERVICENOW_* env var, SecretStr secrets, enabled + mock mode by default in development only
+- [x] `mapping.yaml` + Pydantic models (extra forbidden, safe field names, per mode application blocks, fail closed classification, type matching, document allowlist, node links)
+- [x] Display values: one `sysparm_display_value` per request (`all` when any field needs a display value), read per field
+- [x] Mapping validated in the lifespan when enabled; an invalid mapping stops startup
+- [x] `.env.example`, `.gitignore` (kb_documents), PyYAML pinned
+- [x] Tests: 24 (mapping, settings, startup)
+
+### Phase 1 review
+- 113 pytest, 43 Vitest; ruff, format, bandit, pip-audit, ESLint, Prettier, tsc, build, dash check clean; npm audit unchanged (2 moderate, S15). gitleaks: history clean; working tree hits only in ignored `.venv` and `backend/.env` (S25).
+- Backend started in development mode (mock default): health ok, runbooks still 401 without a session.
+- Deviation: `sysparm_display_value` is request wide in the Table API, so "per field" is implemented as `read: value | display | both` on each field.
+- Waiting on: sample `kb_knowledge` payload to confirm field names.
+
+### Phase 2: Client, mock mode, probe
+- [ ] httpx client (timeouts, TLS on, no redirects, pagination, sysparm params), attachments list and streamed download
+- [ ] SSRF allowlist, OAuth (cached, refreshed) and basic (development only)
+- [ ] Backoff with jitter, Retry-After, circuit breaker
+- [ ] Log redaction filter
+- [ ] Mock client + synthetic fixtures (14 articles, 4 apps, all levels, PDF/DOCX/PNG/TXT, a disguised exe)
+- [ ] scripts/servicenow_probe.py
+- [ ] respx tests
+
+### Phase 3: Data model, processing, sync
+- [ ] m006 tables and columns; ServiceNow runbook ids offset by 100000
+- [ ] services/prose.py dash normaliser (shared patterns with the checker)
+- [ ] HTML to markdown + nh3 sanitising, link rewriting, content hash
+- [ ] Sync engine (incremental watermark, full reconciliation, documents with magic bytes), lock, sync_runs
+- [ ] APScheduler in the lifespan
+- [ ] Tests
+
+### Phase 4: Classification enforcement
+- [ ] Clearance per user, SQL filtering on every path, 404 for hidden, LLM ceiling, delimited article context, audit log
+- [ ] Tests
+
+### Phase 5: API
+- [ ] /api/knowledge/* and /api/admin/servicenow/*, schemas and types.ts
+- [ ] Tests
+
+### Phase 6: Frontend
+- [ ] Knowledge Library, article page, applications, runbook source filter, drawer section, palette, admin panel, states
+
+### Phase 7: Tests, CI, docs
+- [ ] Vitest, Playwright (mock mode), CI additions, docs/SERVICENOW_INTEGRATION.md, README, CLAUDE.md, SECURITY_REVIEW.md
