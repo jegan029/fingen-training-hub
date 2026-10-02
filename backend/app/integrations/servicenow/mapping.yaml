@@ -1,16 +1,20 @@
 # ServiceNow to Training Hub field mapping. Validated at startup (app/integrations/servicenow/mapping.py);
 # an unknown key or a missing required field stops the app with a clear error.
 #
-# Every field name below is an ASSUMPTION based on the standard kb_knowledge table until it is
-# confirmed against a sanitised sample payload from the target instance. Lines marked (A) are guesses.
+# Field names follow the standard (out of the box) kb_knowledge table. They have not been confirmed
+# against a real instance yet: run scripts/servicenow_probe.py against it and adjust. Lines marked (A)
+# are assumptions beyond the standard schema (custom fields, local conventions).
+# Instances that use knowledge article templates keep the body in template fields instead of `text`;
+# the probe reports `text` as empty in that case.
 # Never put instance URLs, sys_ids of real knowledge bases, credentials or client names in this file.
 
 version: 1
 
 # Table API source. The sync adds "^sys_updated_on>{watermark}^ORDERBYsys_updated_on" itself.
 source_table: kb_knowledge
-# (A) Only published articles in the selected knowledge bases. Replace the placeholder sys_ids.
-encoded_query: "workflow_state=published^kb_knowledge_baseIN00000000000000000000000000000001,00000000000000000000000000000002"
+# Only the latest published version of each article (versioning keeps one record per version, all
+# sharing the KB number), in the selected knowledge bases. (A) Replace the placeholder sys_ids.
+encoded_query: "workflow_state=published^latest=true^kb_knowledge_baseIN00000000000000000000000000000001,00000000000000000000000000000002"
 # workflow_state values that count as live. Anything else (retired, outdated, draft) is retired on full sync.
 published_states: [published]
 
@@ -20,17 +24,22 @@ fields:
   number: {name: number}                                  # KB0012345
   title: {name: short_description}
   body_html: {name: text}                                 # HTML body; stored raw, rendered only after sanitising
-  summary: {name: meta_description}                       # (A) optional; first paragraph of the body otherwise
+  summary: {name: meta_description}                       # often empty; first paragraph of the body otherwise
   knowledge_base: {name: kb_knowledge_base, read: both}
   category: {name: kb_category, read: both}
-  article_type: {name: article_type}                      # (A) html / wiki, or a custom type field
+  article_type: {name: article_type}                      # html or wiki: the format, not the purpose
   workflow_state: {name: workflow_state}
   version: {name: version, read: display}
   valid_to: {name: valid_to}
   updated_on: {name: sys_updated_on}
 
+# ServiceNow has no standard classification field (it controls reading with user criteria), so this is
+# always local configuration:
+#   field:          a custom choice field on the article (default, assumed name u_classification)
+#   category:       the category name
+#   knowledge_base: the knowledge base name, for instances that keep sensitive content in its own base
 classification:
-  source: field                                           # field | category
+  source: field
   field: {name: u_classification, read: display}          # (A) custom choice field
   # Source value (case and spacing ignored) to internal level. Unmapped or empty values are restricted.
   values:
@@ -45,12 +54,13 @@ applications:
   # article_fields: number and name are fields on the article itself
   # cmdb_ci:        the article's cmdb_ci reference points at a business application or service
   # m2m:            the many to many article to CI relationship table
-  mode: article_fields
-  article_fields:                                         # (A)
+  mode: cmdb_ci                                           # standard: the article's Configuration item field
+  article_fields:                                         # (A) custom fields
     number: {name: u_application_number}
     name: {name: u_application_name}
-  cmdb_ci:                                                # (A)
-    field: {name: cmdb_ci, read: both}
+  cmdb_ci:
+    field: {name: cmdb_ci, read: both}                    # sys_id and display name
+    # (A) business applications; numbers look like APM0001234
     ci_table: cmdb_ci_business_app
     number_field: number
     name_field: name
@@ -64,25 +74,26 @@ applications:
     name_field: name
     description_field: short_description
 
-# Which articles appear in the Runbook Library. Matched case insensitively against these fields.
+# Which articles appear in the Runbook Library, matched case insensitively on the category name.
+# (article_type only says html or wiki, so it is not used by default.)
 types:
-  match_on: [category, article_type]
+  match_on: [category]                                    # (A) category names below
   runbook: [Runbook, Runbooks]
   sop: [SOP, Standard Operating Procedure, Standard Operating Procedures]
 
 documents:
   include_attachments: true
-  include_linked_articles: true
+  include_linked_articles: true                           # found from KB links in the article body
   # Subset of the hard allowlist (pdf, docx, xlsx, pptx, txt, png, jpg). The size limit is SERVICENOW_MAX_DOC_MB.
   allowed_types: [pdf, docx, xlsx, pptx, txt, png, jpg]
 
 # Links from articles to roadmap nodes (admins can add manual links too).
 node_links:
   by_application:                                         # application number to node ids
-    APP-1001: [4, 15]                                     # synthetic demo apps (fixtures)
-    APP-1002: [11, 12]
-    APP-1003: [16, 17]
-    APP-1004: [2, 29]
+    APM0001001: [4, 15]                                   # synthetic demo apps (fixtures)
+    APM0001002: [11, 12]
+    APM0001003: [16, 17]
+    APM0001004: [2, 29]
   by_keyword:                                             # word in the title or category to node ids
     settlement: [13]
     reconciliation: [14]

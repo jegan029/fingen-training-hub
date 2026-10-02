@@ -16,17 +16,28 @@ def raw():
 def test_shipped_mapping_is_valid():
     mapping = load_mapping(DEFAULT_MAPPING_PATH)
     assert mapping.source_table == "kb_knowledge"
-    assert mapping.applications.mode == "article_fields"
+    assert mapping.applications.mode == "cmdb_ci"
+    # Only the latest published version of each article.
+    assert "workflow_state=published" in mapping.encoded_query and "latest=true" in mapping.encoded_query
+    assert mapping.types.match_on == ["category"]
 
 
 def test_sysparm_fields_are_only_mapped_fields(raw):
     mapping = parse_mapping(raw)
     fields = mapping.sysparm_fields().split(",")
     assert fields[:4] == ["sys_id", "number", "short_description", "text"]
-    assert "u_classification" in fields and "u_application_number" in fields
+    assert "u_classification" in fields and "cmdb_ci" in fields
     assert len(fields) == len(set(fields))
-    # cmdb_ci is configured but not selected, so it is not requested.
-    assert "cmdb_ci" not in fields
+    # The article_fields block is configured but not selected, so its fields are not requested.
+    assert "u_application_number" not in fields
+
+
+@pytest.mark.parametrize("source", ["category", "knowledge_base"])
+def test_classification_from_category_or_knowledge_base_needs_no_extra_field(raw, source):
+    raw["classification"] = {"source": source, "values": {"Restricted Ops": "restricted", "IT": "internal"}}
+    mapping = parse_mapping(raw)
+    assert "u_classification" not in mapping.sysparm_fields()
+    assert mapping.classification.level_for("it") == "internal"
 
 
 def test_display_value_follows_field_reads(raw):
@@ -34,6 +45,7 @@ def test_display_value_follows_field_reads(raw):
     for spec in raw["fields"].values():
         spec.pop("read", None)
     raw["classification"]["field"].pop("read")
+    raw["applications"]["cmdb_ci"]["field"].pop("read")
     assert parse_mapping(raw).sysparm_display_value() == "false"
 
 
@@ -85,9 +97,11 @@ def test_classification_values_normalised_and_fail_closed(raw):
 
 def test_article_kind_from_types(raw):
     types = parse_mapping(raw).types
-    assert types.kind_for(None, "runbook") == "runbook"
-    assert types.kind_for("Standard Operating Procedure", None) == "sop"
+    assert types.kind_for("html", "runbook") == "runbook"
+    assert types.kind_for("html", "Standard Operating Procedure") == "sop"
     assert types.kind_for("html", "General") == "other"
+    # article_type is the format (html or wiki), so it is not matched by default.
+    assert types.kind_for("Runbook", "General") == "other"
 
 
 def test_unreadable_or_broken_yaml(tmp_path):

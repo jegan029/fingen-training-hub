@@ -106,7 +106,8 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - 113 pytest, 43 Vitest; ruff, format, bandit, pip-audit, ESLint, Prettier, tsc, build, dash check clean; npm audit unchanged (2 moderate, S15). gitleaks: history clean; working tree hits only in ignored `.venv` and `backend/.env` (S25).
 - Backend started in development mode (mock default): health ok, runbooks still 401 without a session.
 - Deviation: `sysparm_display_value` is request wide in the Table API, so "per field" is implemented as `read: value | display | both` on each field.
-- Waiting on: sample `kb_knowledge` payload to confirm field names.
+- No ServiceNow access yet, so the mapping follows the standard kb_knowledge schema (follow up commit): `latest=true` in the filter, applications from `cmdb_ci` (business applications, APM numbers), classification from a custom field with `category` and `knowledge_base` as alternatives (no standard field exists), runbook/SOP by category name only, linked articles from body links. Confirm later with the probe on a developer instance.
+- Consequence for Phase 3: a new article version is a new record (new sys_id, same KB number), so articles are keyed by KB number and the stored sys_id is updated.
 
 ### Phase 2: Client, mock mode, probe
 - [ ] httpx client (timeouts, TLS on, no redirects, pagination, sysparm params), attachments list and streamed download

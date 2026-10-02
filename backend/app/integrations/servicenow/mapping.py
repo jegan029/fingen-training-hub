@@ -53,7 +53,8 @@ class ArticleFields(_Strict):
 
 
 class ClassificationMap(_Strict):
-    source: Literal["field", "category"]
+    # field: a (custom) field on the article; category / knowledge_base: the display name of either.
+    source: Literal["field", "category", "knowledge_base"]
     field: FieldSpec | None = None
     values: dict[str, Level] = Field(min_length=1)
 
