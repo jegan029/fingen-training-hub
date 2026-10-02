@@ -12,4 +12,5 @@
 - Files written by Windows PowerShell 5 (`Set-Content -Encoding utf8`) start with a BOM, which breaks JSON parsers such as Lighthouse's `--extra-headers`; strip it or write from Node or Python.
 - A `display: block` utility class on a `<td>` breaks table layout; put such classes on an inner span.
 - Effects that call an imperative API with side effects on cleanup (for example `dialog.close()` firing `onClose`) misbehave under StrictMode's double mount; check what the cleanup triggers.
-
+- Logging filters must keep `record.args` in its original shape: uvicorn's access formatter unpacks the args tuple itself, so collapsing args into `msg` breaks every access log line. Unit tests with plain loggers miss this; start the real server and make a request.
+- `ruff format` can move a trailing `# gitleaks:allow` off the flagged line; put test secrets in their own short assignment.

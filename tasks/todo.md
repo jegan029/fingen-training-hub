@@ -110,13 +110,20 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - Consequence for Phase 3: a new article version is a new record (new sys_id, same KB number), so articles are keyed by KB number and the stored sys_id is updated.
 
 ### Phase 2: Client, mock mode, probe
-- [ ] httpx client (timeouts, TLS on, no redirects, pagination, sysparm params), attachments list and streamed download
-- [ ] SSRF allowlist, OAuth (cached, refreshed) and basic (development only)
-- [ ] Backoff with jitter, Retry-After, circuit breaker
-- [ ] Log redaction filter
-- [ ] Mock client + synthetic fixtures (14 articles, 4 apps, all levels, PDF/DOCX/PNG/TXT, a disguised exe)
-- [ ] scripts/servicenow_probe.py
-- [ ] respx tests
+- [x] httpx client (timeouts, TLS on, no redirects, every request pinned to the instance host, pagination, sysparm params), attachments list and streamed download with a size cap
+- [x] SSRF allowlist (https only, no credentials, port, path or IP literal), OAuth (client credentials or password grant, cached, refresh token, one retry on 401) and basic (development only)
+- [x] Backoff with jitter, Retry-After (seconds or HTTP date, capped at 60 s), circuit breaker (5 failed calls, half open after 5 min); 4xx is a config error, not an outage
+- [x] Log redaction filter (headers, form and JSON secrets, configured secret values, tracebacks), installed at startup
+- [x] Mock client + synthetic fixtures (15 records: 13 in scope, 1 retired, 1 in another knowledge base; 4 apps; all levels plus an unmapped one; PDF, DOCX, PNG, TXT and an exe disguised as a PDF)
+- [x] scripts/servicenow_probe.py (field states, body length and hash only)
+- [x] Tests: 44 (respx)
+
+### Phase 2 review
+- 159 pytest, 43 Vitest; ruff, format, bandit (app and the probe), pip-audit, build, dash check clean; gitleaks clean on history and the new code.
+- Mutation check: disabling the host allowlist, the redirect refusal or secret redaction each fails tests.
+- The live server run found a real bug the unit tests missed: the redaction filter cleared `record.args`, which broke uvicorn's access log. Fixed (args redacted in place) with a regression test using uvicorn's own formatter.
+- Fixture knowledge base sys_ids equal the placeholders in mapping.yaml, so mock mode works with the shipped mapping.
+- Not verified: a live instance (no access). The probe is ready for a developer instance.
 
 ### Phase 3: Data model, processing, sync
 - [ ] m006 tables and columns; ServiceNow runbook ids offset by 100000
