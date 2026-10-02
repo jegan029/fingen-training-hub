@@ -9,3 +9,6 @@ argon2-cffi==25.1.0
 slowapi==0.1.10
 PyYAML==6.0.3
 httpx==0.28.1
+markdownify==1.2.3
+nh3==0.3.7
+APScheduler==3.11.3

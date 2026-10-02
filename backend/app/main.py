@@ -11,6 +11,8 @@ from .config import CORS_ORIGINS, IS_DEV, logger
 from .db import init_db
 from .integrations.servicenow.config import load_config as load_servicenow_config
 from .integrations.servicenow.redaction import install_redaction
+from .integrations.servicenow.scheduler import scheduler_enabled, start_scheduler
+from .integrations.servicenow.sync import SyncEngine
 from .routers import admin, analytics, assessment, auth, certificate, chat, progress, roadmap, runbooks, search
 from .security import (
     CSRF_HEADER,
@@ -30,7 +32,18 @@ async def lifespan(app: FastAPI):
     app.state.servicenow = load_servicenow_config()
     install_redaction(app.state.servicenow.settings.secrets())
     init_db()
-    yield
+    app.state.servicenow_sync = None
+    app.state.servicenow_scheduler = None
+    if app.state.servicenow.mapping is not None:
+        SyncEngine.recover_interrupted()
+        app.state.servicenow_sync = SyncEngine(app.state.servicenow)
+        if scheduler_enabled():
+            app.state.servicenow_scheduler = start_scheduler(app.state.servicenow_sync)
+    try:
+        yield
+    finally:
+        if app.state.servicenow_scheduler is not None:
+            app.state.servicenow_scheduler.shutdown(wait=False)
 
 
 app = FastAPI(

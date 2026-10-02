@@ -126,12 +126,20 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - Not verified: a live instance (no access). The probe is ready for a developer instance.
 
 ### Phase 3: Data model, processing, sync
-- [ ] m006 tables and columns; ServiceNow runbook ids offset by 100000
-- [ ] services/prose.py dash normaliser (shared patterns with the checker)
-- [ ] HTML to markdown + nh3 sanitising, link rewriting, content hash
-- [ ] Sync engine (incremental watermark, full reconciliation, documents with magic bytes), lock, sync_runs
-- [ ] APScheduler in the lifespan
-- [ ] Tests
+- [x] m006: applications, kb_articles, article_applications, article_documents, sync_runs, article_nodes, kb_access_log; runbooks.source/kb_article_id/classification; users.max_classification (existing admins get restricted); ServiceNow runbook ids = 100000 + article id, dataset ids guarded below that
+- [x] services/prose.py: the checker's patterns moved here (checker imports them) plus `normalise_dashes` (ranges to "to", labels to colons, separators to commas, compounds; code, SQL and URLs masked and restored byte for byte)
+- [x] HTML to markdown: nh3 allowlist (scripts, iframes, handlers, unsafe schemes gone), markdownify with image and link rewriting (synced attachments only, KB links to `/knowledge/kb/KB...`), final unsafe link pass; summary from meta_description or first paragraph
+- [x] Sync engine: incremental (>= watermark, hash skip), full (retires missing, unpublished, expired; never deletes), keyed by KB number, applications from article fields, cmdb_ci or m2m, documents (allowlist, declared type, size, magic bytes, sha256 storage next to the DB), runbook projections, node links from mapping (manual kept), per article failure isolation, one run at a time (process lock + DB running guard), interrupted runs closed at startup
+- [x] APScheduler BackgroundScheduler in the lifespan (first incremental 15 s after start, interval, nightly full); SERVICENOW_SCHEDULER=false for tests
+- [x] Tests: 37
+
+### Phase 3 review
+- 196 pytest, 43 Vitest; ruff, format, bandit, pip-audit, ESLint, build, dash check, gitleaks (history and new code) clean.
+- Mutation check: removing the dash normaliser, the magic byte check or retirement each fails tests.
+- Live run (development, mock): the scheduled first sync created 12 articles, stored 5 documents, rejected the disguised executable, no logging errors.
+- Tests found a real gap: a markdown link target with parentheses (`javascript:alert(1)`) escaped the final link pass. Fixed.
+- Deviations: (1) no second nh3 pass over the markdown: it would corrupt code such as `a < b`; react-markdown renders no raw HTML and rehype-sanitize still runs, and the server drops unsafe link targets. (2) Magic bytes checked in code (PDF, PNG, JPEG, OOXML zip directory, UTF-8 text) instead of the `filetype` package: fewer dependencies, and Office files need the zip directory check anyway. (3) KB links point to `/knowledge/kb/KB...` (resolved by number), so link order in a run does not matter. (4) Retired articles' runbook projections are deleted (they are derived rows); the articles themselves are only deactivated.
+- Known limit: attachments added to an article without the article itself changing are picked up by the nightly full sync, not the incremental one.
 
 ### Phase 4: Classification enforcement
 - [ ] Clearance per user, SQL filtering on every path, 404 for hidden, LLM ceiling, delimited article context, audit log
