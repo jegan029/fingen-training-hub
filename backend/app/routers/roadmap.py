@@ -20,13 +20,13 @@ def list_path_nodes(path_id: int, user: CurrentUser = Depends(get_current_user))
     path = kb_service.get_path(path_id)
     if not path:
         raise HTTPException(status_code=404, detail="Learning path not found")
-    nodes = kb_service.list_nodes_for_path(path_id)
+    nodes = kb_service.list_nodes_for_path(path_id, user.max_classification)
     return progress_service.annotate_nodes(user.id, nodes)
 
 
 @router.get("/node/{node_id}", response_model=NodeDetail)
 def get_node(node_id: int, user: CurrentUser = Depends(get_current_user)) -> NodeDetail:
-    node = kb_service.get_node(node_id)
+    node = kb_service.get_node(node_id, user.max_classification)
     if not node:
         raise HTTPException(status_code=404, detail="Node not found")
     return progress_service.annotate_nodes(user.id, [node])[0]

@@ -142,8 +142,20 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - Known limit: attachments added to an article without the article itself changing are picked up by the nightly full sync, not the incremental one.
 
 ### Phase 4: Classification enforcement
-- [ ] Clearance per user, SQL filtering on every path, 404 for hidden, LLM ceiling, delimited article context, audit log
-- [ ] Tests
+- [x] `services/classification.py`: levels, fail closed both ways (unknown content is restricted, unknown clearance is public), `visible_sql` / `visible_sql_named` (bound parameters), LLM ceiling
+- [x] Session user carries `max_classification` (reloaded every request); admin `PUT /api/admin/users/{id}/clearance` (rate limited, CSRF), clearance in `GET /api/admin/users`
+- [x] SQL filtering: runbook list and detail (ServiceNow runbooks only while their article is active), node runbook links (none attached without a clearance), command palette runbooks
+- [x] Hidden and missing look identical (same 404 body)
+- [x] AI Tutor: `article_id` (exactly one of path or article), 404 above clearance, 403 above `SERVICENOW_LLM_MAX_CLASSIFICATION` before anything is sent, article in a `<reference_article>` block, every delimiter tag escaped in article and learner text, system prompt treats reference text as data; offline provider reads the block
+- [x] Audit: `knowledge_service.record_access` (confidential and restricted only), `GET /api/admin/servicenow/audit` (titles above the admin's own clearance withheld)
+- [x] types.ts: Classification, Runbook source fields, AdminUser clearance, ChatResponse.source_article_id
+- [x] Tests: 23
+
+### Phase 4 review
+- 219 pytest, 43 Vitest; ruff, format, bandit, pip-audit, ESLint, Prettier, tsc, build, dash check clean.
+- Mutation check: removing the runbook filter, the LLM ceiling or the tag fencing each fails tests.
+- Live (development, offline LLM, real logins after the scheduled sync): learner sees 30 runbooks (25 local + 5 public/internal ServiceNow), restricted runbook 404, tutor answers from an internal article and 404s a restricted one; admin sees 35, tutor refuses a restricted article with 403.
+- Scope note: lesson content (roadmap nodes) is the training curriculum and stays unclassified; classification covers knowledge articles, documents, runbooks, search and tutor article context. The knowledge endpoints (Phase 5) reuse `get_visible_article` and `visible_sql`.
 
 ### Phase 5: API
 - [ ] /api/knowledge/* and /api/admin/servicenow/*, schemas and types.ts

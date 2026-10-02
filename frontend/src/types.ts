@@ -20,6 +20,9 @@ export interface RunbookRef {
   category: string
 }
 
+/** Mirrors services/classification.py; the server filters by it, the UI only labels. */
+export type Classification = 'public' | 'internal' | 'confidential' | 'restricted'
+
 export interface Runbook extends RunbookRef {
   version: string
   updated: string
@@ -28,6 +31,10 @@ export interface Runbook extends RunbookRef {
   steps: string[]
   escalation_triggers: string[]
   node_ids: number[]
+  source: 'local' | 'servicenow'
+  /** ServiceNow runbooks: the knowledge article holding the body (read only). */
+  kb_article_id: number | null
+  classification: Classification
 }
 
 export interface Prerequisite {
@@ -108,6 +115,8 @@ export interface AdminUser {
   id: number
   name: string
   email: string
+  role: 'admin' | 'learner'
+  max_classification: Classification
   last_active: string | null
   paths: AdminUserPath[]
   overall_pct: number
@@ -123,6 +132,7 @@ export interface AuthUser {
 export interface ChatResponse {
   answer: string
   source_node_ids: number[]
+  source_article_id: number | null
 }
 
 export interface AnalyticsSummary {

@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
+
+from .services.classification import Level
 
 MAX_CHAT_MESSAGE = 2000
 MAX_ANSWER = 4000
@@ -85,6 +87,10 @@ class Runbook(RunbookRef):
     steps: list[str]
     escalation_triggers: list[str]
     node_ids: list[int] = []
+    source: Literal["local", "servicenow"] = "local"
+    # Set for ServiceNow runbooks: the knowledge article holding the body (read only).
+    kb_article_id: int | None = None
+    classification: Level = "internal"
 
 
 class AssessmentRequest(BaseModel):
@@ -119,13 +125,40 @@ class ScenarioResult(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    path_id: int
+    # Exactly one context: a training path (its lessons) or one knowledge article.
+    path_id: int | None = None
+    article_id: int | None = None
     message: str = Field(min_length=1, max_length=MAX_CHAT_MESSAGE)
+
+    @model_validator(mode="after")
+    def _one_context(self) -> "ChatRequest":
+        if (self.path_id is None) == (self.article_id is None):
+            raise ValueError("Send either path_id or article_id")
+        return self
+
+
+class ClearanceUpdate(BaseModel):
+    max_classification: Level
+
+
+class AccessLogEntry(BaseModel):
+    id: int
+    at: str
+    action: Literal["view", "download"]
+    user_name: str
+    user_email: str
+    article_id: int
+    kb_number: str
+    classification: Level
+    # None when the article is above the viewing admin's own clearance.
+    title: str | None
+    document_name: str | None
 
 
 class ChatResponse(BaseModel):
     answer: str
     source_node_ids: list[int]
+    source_article_id: int | None = None
 
 
 class AnalyticsSummary(BaseModel):

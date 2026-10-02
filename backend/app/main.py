@@ -13,7 +13,19 @@ from .integrations.servicenow.config import load_config as load_servicenow_confi
 from .integrations.servicenow.redaction import install_redaction
 from .integrations.servicenow.scheduler import scheduler_enabled, start_scheduler
 from .integrations.servicenow.sync import SyncEngine
-from .routers import admin, analytics, assessment, auth, certificate, chat, progress, roadmap, runbooks, search
+from .routers import (
+    admin,
+    analytics,
+    assessment,
+    auth,
+    certificate,
+    chat,
+    progress,
+    roadmap,
+    runbooks,
+    search,
+    servicenow_admin,
+)
 from .security import (
     CSRF_HEADER,
     CSRFMiddleware,
@@ -92,6 +104,9 @@ app.include_router(search.router, prefix="/api/search", tags=["Search"], depende
 app.include_router(certificate.router, prefix="/api/certificate", tags=["Certificate"], dependencies=authenticated)
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"], dependencies=admin_only)
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"], dependencies=admin_only)
+app.include_router(
+    servicenow_admin.router, prefix="/api/admin/servicenow", tags=["ServiceNow admin"], dependencies=admin_only
+)
 
 
 @app.get("/api/health")

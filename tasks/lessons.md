@@ -14,3 +14,5 @@
 - Effects that call an imperative API with side effects on cleanup (for example `dialog.close()` firing `onClose`) misbehave under StrictMode's double mount; check what the cleanup triggers.
 - Logging filters must keep `record.args` in its original shape: uvicorn's access formatter unpacks the args tuple itself, so collapsing args into `msg` breaks every access log line. Unit tests with plain loggers miss this; start the real server and make a request.
 - `ruff format` can move a trailing `# gitleaks:allow` off the flagged line; put test secrets in their own short assignment.
+- Do not apply code edits through Python heredoc scripts when the replaced text has backslash escapes (`\n`, `\`) or non-ASCII characters: the escaping changes between bash, Python and the file, or Windows reads the script as cp1252, and the edit silently fails or writes real newlines. Use the Edit tool for those.
+- When a test inspects an LLM prompt, record the system prompt and the user prompt separately: the system prompt names the delimiter tags, so counting or splitting on tags over both gives false failures.

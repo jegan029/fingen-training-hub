@@ -1,4 +1,6 @@
 from ..db import connection
+from .classification import visible_sql_named
+from .kb_service import RUNBOOK_LIVE
 
 MIN_QUERY = 2
 MAX_QUERY = 100
@@ -14,7 +16,7 @@ def _like(query: str) -> str:
 class SearchService:
     """Title and description search across paths, nodes, subtopics and runbooks for the command palette."""
 
-    def search(self, query: str) -> list[dict]:
+    def search(self, query: str, clearance: str | None) -> list[dict]:
         query = " ".join(query.split())
         if len(query) < MIN_QUERY:
             return []
@@ -40,11 +42,15 @@ class SearchService:
                    ORDER BY s.node_id, s.position LIMIT :n""",
                 {"q": pattern, "n": PER_KIND},
             ).fetchall()
+            visible, levels = visible_sql_named("r.classification", clearance)
+            # Only the level condition is interpolated; its values are bound parameters.
             runbooks = conn.execute(
-                """SELECT id, title, category FROM runbooks
-                   WHERE title LIKE :q ESCAPE '\\' OR description LIKE :q ESCAPE '\\' OR category LIKE :q ESCAPE '\\'
-                   ORDER BY title LIKE :q ESCAPE '\\' DESC, id LIMIT :n""",
-                {"q": pattern, "n": PER_KIND},
+                f"""SELECT r.id, r.title, r.category FROM runbooks r
+                   WHERE (r.title LIKE :q ESCAPE '\\' OR r.description LIKE :q ESCAPE '\\'
+                          OR r.category LIKE :q ESCAPE '\\')
+                     AND {visible} AND {RUNBOOK_LIVE}
+                   ORDER BY r.title LIKE :q ESCAPE '\\' DESC, r.id LIMIT :n""",  # nosec B608
+                {"q": pattern, "n": PER_KIND, **levels},
             ).fetchall()
 
         results: list[dict] = []

@@ -3,6 +3,12 @@ import sqlite3
 
 from ..db import connection
 from ..schemas import LearningPathSummary, NodeDetail, Runbook, RunbookRef, Subtopic
+from .classification import visible_sql
+
+# Local runbooks are always shown; ServiceNow ones only while their article is active.
+RUNBOOK_LIVE = (
+    "(r.source = 'local' OR EXISTS (SELECT 1 FROM kb_articles k WHERE k.id = r.kb_article_id AND k.active = 1))"
+)
 
 
 class KBService:
@@ -18,21 +24,24 @@ class KBService:
             ).fetchone()
         return LearningPathSummary(**dict(row)) if row else None
 
-    def list_nodes_for_path(self, path_id: int) -> list[NodeDetail]:
+    # Node runbook links are only attached when the caller passes the user's clearance; without it none
+    # are (fail closed), which suits callers that only need node content.
+
+    def list_nodes_for_path(self, path_id: int, clearance: str | None = None) -> list[NodeDetail]:
         with connection() as conn:
             rows = conn.execute(
                 "SELECT id, slug, title, description, content, dependencies, sample_question FROM nodes WHERE path_id = ? ORDER BY id",
                 (path_id,),
             ).fetchall()
-        return self._attach_related([self._row_to_node_detail(row) for row in rows])
+        return self._attach_related([self._row_to_node_detail(row) for row in rows], clearance)
 
-    def get_node(self, node_id: int) -> NodeDetail | None:
+    def get_node(self, node_id: int, clearance: str | None = None) -> NodeDetail | None:
         with connection() as conn:
             row = conn.execute(
                 "SELECT id, slug, title, description, content, dependencies, sample_question FROM nodes WHERE id = ?",
                 (node_id,),
             ).fetchone()
-        return self._attach_related([self._row_to_node_detail(row)])[0] if row else None
+        return self._attach_related([self._row_to_node_detail(row)], clearance)[0] if row else None
 
     def search_content(self, path_id: int, query: str) -> list[NodeDetail]:
         with connection() as conn:
@@ -65,8 +74,8 @@ class KBService:
             sample_question=row["sample_question"],
         )
 
-    def _attach_related(self, nodes: list[NodeDetail]) -> list[NodeDetail]:
-        """Add subtopics and related runbooks (both built from the dataset at startup)."""
+    def _attach_related(self, nodes: list[NodeDetail], clearance: str | None) -> list[NodeDetail]:
+        """Add subtopics and the related runbooks this user may see (both built from the dataset at startup)."""
         if not nodes:
             return nodes
         by_id = {node.id: node for node in nodes}
@@ -79,12 +88,15 @@ class KBService:
                 "ORDER BY node_id, position",
                 ids,
             ).fetchall()
-            runbooks = conn.execute(
-                "SELECT nr.node_id, r.id, r.slug, r.title, r.category FROM node_runbooks nr "
-                f"JOIN runbooks r ON r.id = nr.runbook_id WHERE nr.node_id IN ({placeholders}) "  # nosec B608
-                "ORDER BY nr.node_id, nr.position",
-                ids,
-            ).fetchall()
+            runbooks = []
+            if clearance is not None:
+                visible, levels = visible_sql("r.classification", clearance)
+                runbooks = conn.execute(
+                    "SELECT nr.node_id, r.id, r.slug, r.title, r.category FROM node_runbooks nr "
+                    f"JOIN runbooks r ON r.id = nr.runbook_id WHERE nr.node_id IN ({placeholders}) "  # nosec B608
+                    f"AND {visible} AND {RUNBOOK_LIVE} ORDER BY nr.node_id, nr.position",
+                    (*ids, *levels),
+                ).fetchall()
         for row in subtopics:
             by_id[row["node_id"]].subtopics.append(
                 Subtopic(id=f"{row['node_id']}-{row['position']}", title=row["title"], summary=row["summary"])
@@ -97,18 +109,27 @@ class KBService:
 
     # ── Runbooks ────────────────────────────────────────────
 
-    def list_runbooks(self) -> list[Runbook]:
+    def list_runbooks(self, clearance: str | None) -> list[Runbook]:
+        visible, levels = visible_sql("r.classification", clearance)
         with connection() as conn:
-            rows = conn.execute("SELECT * FROM runbooks ORDER BY id").fetchall()
+            rows = conn.execute(
+                f"SELECT r.* FROM runbooks r WHERE {visible} AND {RUNBOOK_LIVE} ORDER BY r.id",  # nosec B608
+                levels,
+            ).fetchall()
             links = conn.execute("SELECT node_id, runbook_id FROM node_runbooks ORDER BY node_id").fetchall()
         node_ids: dict[int, list[int]] = {}
         for link in links:
             node_ids.setdefault(link["runbook_id"], []).append(link["node_id"])
         return [self._row_to_runbook(row, node_ids.get(row["id"], [])) for row in rows]
 
-    def get_runbook(self, runbook_id: int) -> Runbook | None:
+    def get_runbook(self, runbook_id: int, clearance: str | None) -> Runbook | None:
+        """None both when the runbook does not exist and when the user may not see it (callers send 404)."""
+        visible, levels = visible_sql("r.classification", clearance)
         with connection() as conn:
-            row = conn.execute("SELECT * FROM runbooks WHERE id = ?", (runbook_id,)).fetchone()
+            row = conn.execute(
+                f"SELECT r.* FROM runbooks r WHERE r.id = ? AND {visible} AND {RUNBOOK_LIVE}",  # nosec B608
+                (runbook_id, *levels),
+            ).fetchone()
             links = conn.execute(
                 "SELECT node_id FROM node_runbooks WHERE runbook_id = ? ORDER BY node_id", (runbook_id,)
             ).fetchall()
@@ -128,4 +149,7 @@ class KBService:
             steps=json.loads(row["steps"]),
             escalation_triggers=json.loads(row["escalation_triggers"]),
             node_ids=node_ids,
+            source=row["source"],
+            kb_article_id=row["kb_article_id"],
+            classification=row["classification"],
         )
