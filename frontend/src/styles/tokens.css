@@ -73,11 +73,24 @@
   --shadow-md: 0 4px 14px rgba(15, 23, 51, 0.1);
   --shadow-lg: 0 16px 40px rgba(15, 23, 51, 0.18);
 
-  /* Motion */
-  --duration-fast: 150ms;
-  --duration-base: 250ms;
-  --duration-slow: 450ms;
+  /*
+   * Motion. Defined once and reused everywhere; motion shows a change of state or progress, never decoration.
+   * Only transform and opacity animate (progress ring and analytics arcs animate stroke dash offset, the paint only exception).
+   */
+  --motion-instant: 100ms;
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-slow: 450ms;
+  --motion-draw: 700ms;
+  --stagger-step: 60ms;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Long exponential ease out, for things that arrive or finish (a check, a score). */
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Older names, kept so existing modules keep working. */
+  --duration-fast: var(--motion-fast);
+  --duration-base: var(--motion-base);
+  --duration-slow: var(--motion-slow);
 
   /* Layers */
   --z-topbar: 50;
@@ -163,10 +176,12 @@
   outline-offset: 2px;
 }
 
+/* Safety net for reduced motion. Elements marked .motion-keep (roadmap feedback) define their own
+   opacity only alternative, so the confirmation of an action is not lost. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not(.motion-keep),
+  *:not(.motion-keep)::before,
+  *:not(.motion-keep)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

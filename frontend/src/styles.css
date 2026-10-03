@@ -96,6 +96,8 @@ p {
   position: sticky;
   top: 0;
   z-index: 100;
+  /* Captured on its own, so it stays still while the page below changes. */
+  view-transition-name: topbar;
 }
 .topbar-inner {
   max-width: 1280px;
@@ -1109,5 +1111,36 @@ select:focus {
   }
   .topnav a {
     padding: 0 0.75rem;
+  }
+}
+
+/* ── Page transitions (View Transitions API, see navigateWithTransition) ── */
+::view-transition-old(root) {
+  animation: page-out var(--motion-fast) var(--ease-out) both;
+}
+::view-transition-new(root) {
+  animation: page-in var(--motion-base) var(--ease-out) both;
+}
+/* Shared elements (a topic title moving into the lesson heading) morph on the base timing. */
+::view-transition-group(*) {
+  animation-duration: var(--motion-slow);
+  animation-timing-function: var(--ease-out);
+}
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }

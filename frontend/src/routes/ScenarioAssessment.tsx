@@ -5,6 +5,7 @@ import { fetchScenarioQuestion, submitScenario } from '../api'
 import type { ScenarioQuestion, ScenarioResult } from '../types'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
+import { motion, staggerStyle } from '../lib/motion'
 import page from '../styles/page.module.css'
 import styles from './Assessment.module.css'
 
@@ -119,12 +120,15 @@ export default function ScenarioAssessment() {
           </form>
         ) : (
           <div aria-live="polite">
-            <div className={`${styles.outcome} ${result.is_correct ? styles.good : styles.poor}`}>
-              {result.is_correct ? (
-                <CheckCircle2 size={28} aria-hidden="true" />
-              ) : (
-                <XCircle size={28} aria-hidden="true" />
-              )}
+            <div className={`${styles.outcome} ${motion.rise} ${result.is_correct ? styles.good : styles.poor}`}>
+              {/* The verdict icon lands a beat after the panel. */}
+              <span className={motion.pop} style={staggerStyle(2)}>
+                {result.is_correct ? (
+                  <CheckCircle2 size={28} aria-hidden="true" />
+                ) : (
+                  <XCircle size={28} aria-hidden="true" />
+                )}
+              </span>
               <div>
                 <p className={styles.outcomeTitle}>{result.is_correct ? 'Correct' : 'Not quite right'}</p>
                 <p className={styles.outcomeText}>
@@ -141,7 +145,7 @@ export default function ScenarioAssessment() {
                 const wasChosen = i === result.chosen_option
                 const tone = isCorrect ? styles.good : wasChosen ? styles.poor : ''
                 return (
-                  <li key={i} className={`${styles.reviewItem} ${tone}`}>
+                  <li key={i} className={`${styles.reviewItem} ${motion.rise} ${tone}`} style={staggerStyle(i + 3)}>
                     <span className={styles.letter} aria-hidden="true">
                       {isCorrect ? <Check size={14} /> : wasChosen ? <X size={14} /> : OPTION_LABELS[i]}
                     </span>
@@ -158,7 +162,7 @@ export default function ScenarioAssessment() {
               })}
             </ul>
 
-            <div className={styles.explanation}>
+            <div className={`${styles.explanation} ${motion.rise}`} style={staggerStyle(question.options.length + 3)}>
               <p className={page.eyebrow}>
                 <Lightbulb size={14} aria-hidden="true" /> Explanation
               </p>

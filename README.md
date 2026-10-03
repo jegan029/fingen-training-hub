@@ -14,6 +14,14 @@ Built with FastAPI and SQLite on the backend and React 18, TypeScript and Vite o
 - **Search.** Press Ctrl K (Cmd K on a Mac) to search paths, topics, subtopics, runbooks and, within your clearance, articles, applications and documents.
 - **Progress.** A daily streak, "continue where you left off", and a certificate the server grants only when every topic is done and the assessment average reaches the threshold.
 - **Trainer view.** Per learner progress, cohort analytics and the weakest topics by average score.
+- **Motion that shows progress.** The motion uses CSS and the browser's View Transitions, with no animation library.
+  - **Roadmap**: connectors draw in as the roadmap loads. Marking a topic done lights the path to the next topic, and the topics it unlocks are announced to screen readers.
+  - **Path list**: progress rings fill to real values.
+  - **Lesson**: the topic title moves from the drawer into the lesson heading.
+  - **Assessment**: scores and feedback arrive in sequence.
+  - **AI Tutor**: shows a typing indicator and source chips.
+  - **Analytics**: opens with an "Onboarding at a glance" summary.
+  - **Reduced motion**: everything is static.
 - **Accessibility and themes.** Light and dark themes. The UI works by keyboard and respects reduced motion. Lighthouse on the home page: mobile 93/100/100, desktop 100/100/100 (performance, accessibility, best practices).
 
 ## Quick start (Docker)

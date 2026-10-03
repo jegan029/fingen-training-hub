@@ -208,3 +208,77 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 2. Real instance: `scripts/servicenow_probe.py` and the client are ready; not verified, because no instance was available. Use a developer instance as described in the docs.
 3. Classification enforced server side on every path, including search, runbooks, downloads and the AI Tutor. Done, with tests and mutation checks.
 4. No secrets, real KB content or client identifiers committed; all tests and checks pass; documentation updated. Done.
+
+## Motion and graphics pass (branch `feature/motion`, stacked on `feature/servicenow-knowledge`)
+Plan approved 2026-10-03: CSS plus View Transitions (no animation library), drawer title to lesson heading as the shared element, transform and opacity only (progress ring stroke is the one paint only exception).
+
+### Phase A: Motion foundation
+- [x] Motion tokens in `tokens.css` (durations, easings, stagger; old `--duration-*` names alias them)
+- [x] `styles/motion.module.css`: fadeIn, rise, pop, sheen skeleton, transform only `.meter` progress fill; static under reduced motion
+- [x] Skeletons use the sheen (pulse keyframes removed from three modules); progress bars move from `width` to `translateX`
+- [x] `lib/motion.ts`: `usePrefersReducedMotion`, `staggerStyle`, `meterStyle`, `navigateWithTransition`; `components/TransitionLink.tsx`
+- [x] Page transitions: root cross fade with a small rise, topbar held still; topbar and footer links use `TransitionLink`
+- [x] Empty and error states rise in once
+
+### Phase B: Roadmap
+- [x] Connectors draw in through an SVG mask whose sheet slides down (transform only, dashed lines intact); sections, topics and subtopics arrive at their share of the draw
+- [x] Spine below every done topic is lit in the done colour (persistent state, not only an effect)
+- [x] Completion moment: the lit connector draws to the next topic, a ring spreads from the topic just done, then from each topic it unlocked, whose icon pops in; same moment in the mobile list
+- [x] `statusChange.describeChange` (pure, tested) feeds a polite status region inside the drawer: "Kafka Basics marked done. Settlement Flow unlocked."
+- Kept as is: the four state treatments were already distinct (icon, text, border style, fill), so no new looping effect was added for in progress
+
+### Phase C: Path list
+- [x] Path cards rise in with a stagger; existing hover and focus depth kept
+- [x] `ui/ProgressRing`: arc fills while the number counts up (stroke dash offset, the one paint only exception), progressbar semantics kept, final value under reduced motion
+- [x] `ProgressLattice` header graphic: one dotted track per path lit up to the topics done (hidden from assistive technology, dropped below 720 px)
+
+### Phase D: Lesson page
+- [x] "Read full lesson" runs a View Transition: the drawer title and the lesson heading share a `view-transition-name` (`sharedTitle`), the title is passed in router state so the heading exists before the lesson loads, and the drawer preloads the lesson chunk; Back reverses it when the roadmap renders in time (otherwise a plain cross fade)
+- [x] Lesson sections (`splitSections`, fence aware, tested) rise in as they scroll into view; sections already on screen are left alone, print and find in page unaffected
+
+### Phase E: Assessment
+- [x] While the model scores: a result shaped placeholder sweeping (one status region, "Evaluating your answer"), with a line saying what is happening
+- [x] Result: the score counts up (tabular figures, final value in hidden text for screen readers), the bar slides in, the category pops, feedback and key points rise in order; focus moves to the result heading
+- [x] Scenario quiz: verdict panel rises, its icon pops, the answer review and explanation follow in order
+
+### Phase F: Chat
+- [x] `ui/TypingIndicator` (bobbing dots, "AI Tutor is typing" for screen readers, static under reduced motion) replaces "Thinking…"
+- [x] Sent messages slide in from the reading end, replies rise, a long reply's paragraphs follow 40 ms apart (all text present from the first frame)
+- [x] Source chips fade in after the reply. Path mode: the path the tutor answered from plus the topics the answer names (`pathSources`; the API lists every topic in the path, which is not a citation). Article mode: the KB article
+
+### Phase G: Analytics
+- [x] "Onboarding at a glance": completion per path as concentric rings filling outer first, the average counting up in the centre, a text legend with every value; average score per path as bars that grow when scrolled into view. Built from every path's analytics with `Promise.allSettled` (a failed path shows "Unavailable")
+- [x] Per path stats count up (`Ticker`, decimals kept, final value in hidden text)
+- Changed from the plan: no hidden data table, because the legend and bar rows already show every value as text
+
+### Phase H: Finish
+- [x] Tests: Vitest 51 to 82 since Phase A started, covering motion helpers, ring, status change, completion moment, sections, assessment, chat, analytics, plus a view transition regression; Playwright learner flow asserts the unlock announcement
+- [x] Batched visual check in Brave at 1440 and 390, light and dark, motion on and reduced motion
+- [x] Detector: only pre-existing findings plus the overshoot easing, which was replaced
+- [x] Finish review (fix, then a verdict pass): applied stagger order, labelled lattice, scrim cleared during the completion moment, done reads as achieved, calmer pop, header orphan; found and fixed the title morph never running (rAF paused during view transition updates); morph proven by an animation dump (node-title group 450 ms from the drawer title to the lesson heading)
+- [x] DESIGN.md and `.impeccable/design.json` recorded from the shipped system; surface brief holds the direction contract
+- [x] CLAUDE.md and README motion notes
+
+### Motion pass review
+- No new dependency. JS gzip across all chunks 163.2 to 167.9 kB (main chunk 16.7 to 17.3 kB), CSS gzip 24.8 to 27.7 kB.
+- Open, for the user: uppercase eyebrow labels above headings on the assessment, home and certificate pages (pre-existing, the craft floor bans them); a cue for a topic unlocked below the fold; the corporate brand guide.
+- Incident: a temporary worktree with a junction to `node_modules` deleted part of the real folder on removal; restored with `npm ci` (lockfile unchanged), lesson recorded.
+
+### Roadmap motion, second pass (`/impeccable animate roadmap view`)
+- [x] Completion lands as one beat: header meter, done count and percentage hold their old values and move when the lit connector reaches the next topic (`useCountUp` now continues from the number on screen and takes a delay)
+- [x] "Unlocked below" cue (`roadmap/UnlockCue.tsx`): when an unlocked topic is out of view after the drawer closes, a button offers to show it; the page moves only on press, the topic is focused and rings again; retires when the topic is visible or after 8 s. Centred on phones, bottom right on wider screens
+- [x] Prerequisite arcs fade in (150 ms) and out (100 ms) instead of popping
+- [x] Every status change acknowledges its topic: in progress, skipped and reset pop the icon without a ring (`celebration` in `statusChange.ts`)
+- [x] Reduced motion keeps the confirmation: lit connector and rings fade without spreading, icon pops become fades (`.motion-keep` opts these out of the global clamp)
+- Changed from the plan: the cue appears once the drawer closes (under the open drawer it would sit beneath the scrim), and Escape does not dismiss it, because Escape closes the drawer
+- Verified: 86 Vitest, Playwright 5 (learner flow now covers the cue, stable over repeated runs), visual round at 1440 and 390, light and dark, reduced motion
+
+
+### Node completion delight (`/impeccable delight node completion`)
+Thesis: done should feel like a clean shift handover; the work is acknowledged and the next piece is already in hand.
+- [x] Handover line in the drawer after a topic is marked done: "Done. Next up: X" (or "X, now unlocked"), with "Open next topic" and the N key; one other unlocked topic is named, several are counted. It lands with the header beat and stays until another topic opens or the status changes
+- [x] Next topic logic in `describeChange` (`nextUp`: the first open topic that is not locked, done or skipped, after this one, wrapping to the top); the live region adds "Next up: X."
+- [x] Path complete: every other topic icon pulses once, spreading out from the topic just done (`sweepStep`); the drawer says "That completes {path}." with links to the certificate and all paths; the header keeps a "Path complete." line with a certificate link on every visit
+- [x] Reduced motion: the sweep is an opacity pulse on the same timing; everything else is static
+- Changed from the plan: the sweep pulses icons in place (no fade out first) and spreads from the completed topic rather than top to bottom, because a path is finished at the bottom of the map where the learner is looking; several unlocked topics are counted in the visible line to keep it short
+- Verified: 94 Vitest, Playwright 5 (learner flow opens the next topic from the handover), 256 pytest, visual round at 1440 and 390, light and dark, reduced motion; sweep timing checked with `getAnimations()` (510 to 990 ms delays, done before the 1600 ms moment clears)

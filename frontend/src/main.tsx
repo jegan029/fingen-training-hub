@@ -11,6 +11,7 @@ import '@fontsource/playfair-display/700.css'
 import '@fontsource/playfair-display/900.css'
 import '@fontsource/playfair-display/700-italic.css'
 import './styles/tokens.css'
+import './styles/motion.css'
 import './styles.css'
 import { applyStoredTheme } from './lib/theme'
 

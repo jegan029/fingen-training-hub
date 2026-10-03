@@ -60,10 +60,10 @@
 }
 
 .fill {
+  composes: motion-meter from global;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--color-accent);
-  transition: width var(--duration-slow) var(--ease-out);
 }
 
 .counters {
@@ -84,6 +84,27 @@
   border-radius: var(--radius-full);
   background: var(--color-surface);
   font: 600 var(--text-xs) / 1.6 var(--font-sans);
+}
+
+/* A lasting state, not a moment: shown on every visit once each topic is done. */
+.complete {
+  --delay: var(--motion-slow);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  color: var(--color-text);
+  font: 600 var(--text-sm) / 1.4 var(--font-sans);
+}
+
+.complete svg {
+  color: var(--color-success);
+}
+
+.complete a {
+  color: var(--color-accent);
+  text-underline-offset: 3px;
 }
 
 .body {
@@ -118,12 +139,15 @@
   width: 240px;
   height: 52px;
   border-radius: var(--radius-md);
-  background: var(--color-surface-2);
-  animation: pulse 1.2s ease-in-out infinite;
+  composes: motion-sheen from global;
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.5;
-  }
+/* The meter waits for the lit connector to reach the next topic, so the completion reads as one beat. */
+.progress[data-landing] .fill {
+  transition-delay: var(--motion-slow);
+}
+
+.count {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
 }
