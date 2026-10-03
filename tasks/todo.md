@@ -237,7 +237,9 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - [x] Lesson sections (`splitSections`, fence aware, tested) rise in as they scroll into view; sections already on screen are left alone, print and find in page unaffected
 
 ### Phase E: Assessment
-- [ ] Result shaped evaluating skeleton; staged result reveal
+- [x] While the model scores: a result shaped placeholder sweeping (one status region, "Evaluating your answer"), with a line saying what is happening
+- [x] Result: the score counts up (tabular figures, final value in hidden text for screen readers), the bar slides in, the category pops, feedback and key points rise in order; focus moves to the result heading
+- [x] Scenario quiz: verdict panel rises, its icon pops, the answer review and explanation follow in order
 
 ### Phase F: Chat
 - [ ] Typing indicator, message entrance, citation chips from `source_node_ids` and `source_article_id`
