@@ -7,8 +7,9 @@ import RoadmapCanvas from '../components/roadmap/RoadmapCanvas'
 import RoadmapList from '../components/roadmap/RoadmapList'
 import NodeDrawer from '../components/roadmap/NodeDrawer'
 import Legend from '../components/roadmap/Legend'
+import UnlockCue from '../components/roadmap/UnlockCue'
 import { describeChange, type StatusChange } from '../components/roadmap/statusChange'
-import { meterStyle } from '../lib/motion'
+import { meterStyle, motion, useCountUp } from '../lib/motion'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import styles from './ModuleView.module.css'
 
@@ -24,6 +25,8 @@ export default function ModuleView() {
   // The last status change: drives the completion moment and the live region announcement.
   const [change, setChange] = useState<StatusChange | null>(null)
   const [announcement, setAnnouncement] = useState('')
+  // Topics the last change unlocked; the cue offers to show them if they are out of view.
+  const [pendingUnlock, setPendingUnlock] = useState<{ id: number; title: string }[]>([])
   const opener = useRef<HTMLElement | null>(null)
   const narrow = useMediaQuery('(max-width: 767px)')
 
@@ -73,6 +76,7 @@ export default function ModuleView() {
       const next = describeChange(before, after, selected.id)
       setChange(next)
       if (next) setAnnouncement(next.message)
+      setPendingUnlock(after.filter((n) => next?.unlockedIds.includes(n.id)).map((n) => ({ id: n.id, title: n.title })))
     } catch (err) {
       setStatusError(err instanceof ApiError ? err.message : 'Could not update the status')
     } finally {
@@ -87,6 +91,20 @@ export default function ModuleView() {
   const total = nodes?.length ?? 0
   const pct = total ? Math.round((counts.done / total) * 100) : 0
 
+  // Completion lands as one beat: the header meter, count and percentage move when the lit connector
+  // reaches the next topic (--motion-slow), not on the click. Progress bar aria values stay current.
+  const landing = change?.status === 'done'
+  const LAND_MS = 450
+  const shownDone = useCountUp(counts.done, nodes !== null, LAND_MS, landing ? LAND_MS : 0)
+  const shownPct = useCountUp(pct, nodes !== null, LAND_MS, landing ? LAND_MS : 0)
+
+  const clearUnlock = useCallback(() => setPendingUnlock([]), [])
+  // After the cue brings a topic into view, ring it again so the eye lands on it.
+  const ringTopic = useCallback(
+    (nodeId: number) => setChange({ nodeId: -1, status: 'pending', nextId: null, unlockedIds: [nodeId], message: '' }),
+    [],
+  )
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -97,15 +115,15 @@ export default function ModuleView() {
         <h1 className={styles.title}>{path?.title ?? 'Training path'}</h1>
         {path && <p className={styles.description}>{path.description}</p>}
 
-        <div className={styles.progress}>
+        <div className={styles.progress} data-landing={landing || undefined}>
           <div className={styles.progressText}>
             <span>
               <strong>
-                {counts.done} of {total}
+                {shownDone} of {total}
               </strong>{' '}
               done
             </span>
-            <span>{pct}%</span>
+            <span>{shownPct}%</span>
           </div>
           <div
             className={styles.bar}
@@ -120,7 +138,10 @@ export default function ModuleView() {
           <ul className={styles.counters} aria-label="Status counts">
             <li>
               <CheckCircle2 size={14} aria-hidden="true" />
-              Done {counts.done}
+              Done {/* Shows the old count until the beat lands, then the new one pops in. */}
+              <span key={shownDone} className={landing ? `${motion.pop} ${styles.count}` : styles.count}>
+                {shownDone}
+              </span>
             </li>
             <li>
               <CircleDot size={14} aria-hidden="true" />
@@ -165,6 +186,15 @@ export default function ModuleView() {
             />
           )}
         </div>
+      )}
+
+      {pendingUnlock.length > 0 && !selected && (
+        <UnlockCue
+          key={pendingUnlock.map((t) => t.id).join('-')}
+          topics={pendingUnlock}
+          onDone={clearUnlock}
+          onShow={ringTopic}
+        />
       )}
 
       {selected && (

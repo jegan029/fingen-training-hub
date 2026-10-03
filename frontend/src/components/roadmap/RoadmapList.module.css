@@ -92,7 +92,8 @@
   pointer-events: none;
 }
 
-.main[data-celebrate]::after {
+.main[data-celebrate='done']::after,
+.main[data-celebrate='unlocked']::after {
   animation: ring var(--motion-draw) var(--ease-out);
 }
 
@@ -117,7 +118,24 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .main[data-celebrate]::after {
-    animation: none;
+  .main[data-celebrate='done']::after,
+  .main[data-celebrate='unlocked']::after {
+    animation: ringFade var(--motion-draw) linear;
+  }
+}
+
+/* Reduced motion keeps the confirmation without movement: rings and the lit connector fade, nothing spreads or draws. */
+@keyframes fadeOnly {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ringFade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }

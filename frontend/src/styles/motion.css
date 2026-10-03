@@ -105,10 +105,14 @@
   .motion-fade-in,
   .motion-rise,
   .motion-from-end,
-  .motion-pop,
   .motion-meter {
     animation: none;
     transition: none;
+  }
+
+  /* A pop still confirms something arrived: as a short fade, without scaling. */
+  .motion-pop {
+    animation: motion-kf-fade-in var(--motion-fast) linear backwards;
   }
 
   .motion-sheen::after {

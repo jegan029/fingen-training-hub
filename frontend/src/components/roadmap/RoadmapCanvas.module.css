@@ -53,6 +53,27 @@
   opacity: 0.85;
 }
 
+/* Prerequisite arcs fade in for the topic being pointed at or focused, and out faster when it is left. */
+.arcIn {
+  animation: arcIn var(--motion-fast) var(--ease-out) backwards;
+}
+
+.arcOut {
+  animation: arcOut var(--motion-instant) ease-in forwards;
+}
+
+@keyframes arcIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes arcOut {
+  to {
+    opacity: 0;
+  }
+}
+
 /* Draw in: the mask's sheet slides down over --motion-draw; elements arrive at their share of it (--at). */
 .curtain {
   transform-box: fill-box;
@@ -145,7 +166,8 @@
   pointer-events: none;
 }
 
-.main[data-celebrate]::after {
+.main[data-celebrate='done']::after,
+.main[data-celebrate='unlocked']::after {
   animation: ring var(--motion-draw) var(--ease-out);
 }
 
@@ -171,10 +193,33 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .curtain,
-  .lit[data-draw],
-  .main[data-celebrate]::after {
+  .curtain {
     animation: none;
+  }
+
+  .lit[data-draw] {
+    animation: fadeOnly var(--motion-fast) linear backwards;
+  }
+
+  .main[data-celebrate='done']::after,
+  .main[data-celebrate='unlocked']::after {
+    animation: ringFade var(--motion-draw) linear;
+  }
+}
+
+/* Reduced motion keeps the confirmation without movement: rings and the lit connector fade, nothing spreads or draws. */
+@keyframes fadeOnly {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ringFade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 

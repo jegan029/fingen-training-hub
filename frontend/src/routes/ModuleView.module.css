@@ -120,3 +120,13 @@
   border-radius: var(--radius-md);
   composes: motion-sheen from global;
 }
+
+/* The meter waits for the lit connector to reach the next topic, so the completion reads as one beat. */
+.progress[data-landing] .fill {
+  transition-delay: var(--motion-slow);
+}
+
+.count {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}

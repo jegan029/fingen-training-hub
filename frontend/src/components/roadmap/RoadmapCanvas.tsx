@@ -1,8 +1,8 @@
-import { useId, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 'react'
 import type { NodeSummary } from '../../types'
 import { layoutRoadmap } from './layout'
 import { StatusIcon, statusText } from './status'
-import type { StatusChange } from './statusChange'
+import { celebration, type StatusChange } from './statusChange'
 import styles from './RoadmapCanvas.module.css'
 import { motion } from '../../lib/motion'
 
@@ -20,12 +20,6 @@ function arrival(y: number, height: number): CSSProperties {
   return { '--at': (y / height).toFixed(3) } as CSSProperties
 }
 
-function celebration(change: StatusChange | null | undefined, nodeId: number): 'done' | 'unlocked' | undefined {
-  if (!change) return undefined
-  if (change.nodeId === nodeId && change.status === 'done') return 'done'
-  return change.unlockedIds.includes(nodeId) ? 'unlocked' : undefined
-}
-
 /**
  * 2D roadmap: main topics on a central spine, subtopics branching left and right.
  * Keyboard: the topics form one tab stop; arrow keys move between them, Home/End jump, Enter opens.
@@ -39,10 +33,23 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
   const [hoverId, setHoverId] = useState<number | null>(null)
   const [focusedId, setFocusedId] = useState<number | null>(null)
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
+  // Arcs of the topic just left fade out briefly instead of vanishing.
+  const [leavingId, setLeavingId] = useState<number | null>(null)
+  const leaveTimer = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
 
   const byId = useMemo(() => new Map(nodes.map((n) => [n.id, n])), [nodes])
   // Prerequisite arcs show for the node being pointed at, focused, or open in the drawer.
   const activeId = hoverId ?? focusedId ?? selectedId
+
+  const release = (clear: () => void) => {
+    if (activeId !== null) {
+      setLeavingId(activeId)
+      window.clearTimeout(leaveTimer.current)
+      leaveTimer.current = window.setTimeout(() => setLeavingId(null), 100)
+    }
+    clear()
+  }
 
   const moveFocus = (index: number) => {
     const next = Math.max(0, Math.min(nodes.length - 1, index))
@@ -86,7 +93,12 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
           </defs>
           <g mask={`url(#${maskId})`}>
             {layout.edges.map((edge) => {
-              if (edge.kind === 'dependency' && edge.to !== activeId) return null
+              if (edge.kind === 'dependency') {
+                // Prerequisite arcs fade in for the active topic and fade out quickly when it is left.
+                const phase = edge.to === activeId ? styles.arcIn : edge.to === leavingId ? styles.arcOut : null
+                if (!phase) return null
+                return <path key={edge.id} d={edge.d} className={`${styles.dependency} ${phase}`} />
+              }
               return <path key={edge.id} d={edge.d} className={styles[edge.kind]} />
             })}
             {/* The spine below each done topic is lit; the one just completed draws down to the next topic. */}
@@ -98,7 +110,7 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
               return (
                 <rect
                   key={`lit-${box.id}`}
-                  className={styles.lit}
+                  className={`${styles.lit} ${drawing ? motion.keep : ''}`}
                   data-draw={drawing || undefined}
                   x={layout.centerX - 2}
                   y={top}
@@ -134,7 +146,7 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
               title={sub.summary || sub.title}
               onClick={(e) => onOpen(sub.nodeId, e.currentTarget)}
               onMouseEnter={() => setHoverId(sub.nodeId)}
-              onMouseLeave={() => setHoverId(null)}
+              onMouseLeave={() => release(() => setHoverId(null))}
             >
               <span className={styles.subTitle}>{sub.title}</span>
             </button>
@@ -154,7 +166,8 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
               }}
               type="button"
               tabIndex={box.index === focusIndex ? 0 : -1}
-              className={styles.main}
+              className={`${styles.main} ${celebrate ? motion.keep : ''}`}
+              data-node-id={node.id}
               data-status={node.status}
               data-locked={node.locked || undefined}
               data-selected={selectedId === node.id || undefined}
@@ -168,14 +181,14 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
                 setFocusIndex(box.index)
                 setFocusedId(node.id)
               }}
-              onBlur={() => setFocusedId(null)}
+              onBlur={() => release(() => setFocusedId(null))}
               onMouseEnter={() => setHoverId(node.id)}
-              onMouseLeave={() => setHoverId(null)}
+              onMouseLeave={() => release(() => setHoverId(null))}
             >
               {/* Keyed by status so the new icon pops in when the state changes. */}
               <span
                 key={`${node.status}-${node.locked}`}
-                className={`${styles.icon} ${celebrate ? motion.pop : ''}`}
+                className={`${styles.icon} ${celebrate ? `${motion.pop} ${motion.keep}` : ''}`}
                 data-celebrate={celebrate}
               >
                 <StatusIcon status={node.status} locked={node.locked} size={18} />

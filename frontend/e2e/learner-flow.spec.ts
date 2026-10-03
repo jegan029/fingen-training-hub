@@ -32,6 +32,20 @@ test('learner signs in, opens a path, marks a topic done and sees progress updat
   await page.keyboard.press('Escape')
   await page.goto('/')
   await expect(page.getByText('Up next')).toBeVisible()
+
+  // In a short window an unlock lands below the fold: a cue offers to show it, and the page moves only on press.
+  await page.setViewportSize({ width: 1280, height: 360 })
+  await page.goto('/roadmaps/2')
+  await page.getByRole('button', { name: /^1\. / }).click()
+  await page.keyboard.press('d')
+  await expect(page.getByRole('dialog').getByRole('button', { name: /Done/, pressed: true })).toBeVisible()
+  // Closing returns focus to the topic just done; in this short window the topic it unlocked stays below.
+  await page.keyboard.press('Escape')
+  const cue = page.getByRole('button', { name: /unlocked Show$/ })
+  await expect(cue).toBeVisible()
+  await cue.click()
+  await expect(page.getByRole('button', { name: /^2\. Authorisation & Limits, Pending$/ })).toBeFocused()
+  await expect(cue).toBeHidden()
 })
 
 test('Ctrl+K search opens a runbook', async ({ page }) => {

@@ -263,3 +263,13 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - No new dependency. JS gzip across all chunks 163.2 to 167.9 kB (main chunk 16.7 to 17.3 kB), CSS gzip 24.8 to 27.7 kB.
 - Open, for the user: uppercase eyebrow labels above headings on the assessment, home and certificate pages (pre-existing, the craft floor bans them); a cue for a topic unlocked below the fold; the corporate brand guide.
 - Incident: a temporary worktree with a junction to `node_modules` deleted part of the real folder on removal; restored with `npm ci` (lockfile unchanged), lesson recorded.
+
+### Roadmap motion, second pass (`/impeccable animate roadmap view`)
+- [x] Completion lands as one beat: header meter, done count and percentage hold their old values and move when the lit connector reaches the next topic (`useCountUp` now continues from the number on screen and takes a delay)
+- [x] "Unlocked below" cue (`roadmap/UnlockCue.tsx`): when an unlocked topic is out of view after the drawer closes, a button offers to show it; the page moves only on press, the topic is focused and rings again; retires when the topic is visible or after 8 s. Centred on phones, bottom right on wider screens
+- [x] Prerequisite arcs fade in (150 ms) and out (100 ms) instead of popping
+- [x] Every status change acknowledges its topic: in progress, skipped and reset pop the icon without a ring (`celebration` in `statusChange.ts`)
+- [x] Reduced motion keeps the confirmation: lit connector and rings fade without spreading, icon pops become fades (`.motion-keep` opts these out of the global clamp)
+- Changed from the plan: the cue appears once the drawer closes (under the open drawer it would sit beneath the scrim), and Escape does not dismiss it, because Escape closes the drawer
+- Verified: 86 Vitest, Playwright 5 (learner flow now covers the cue, stable over repeated runs), visual round at 1440 and 390, light and dark, reduced motion
+

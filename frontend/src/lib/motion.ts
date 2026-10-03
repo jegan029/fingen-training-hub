@@ -34,25 +34,36 @@ export function useInView<T extends Element>(rootMargin = '0px 0px -10% 0px') {
   return [ref, inView] as const
 }
 
-/** Counts from 0 to `target` once `active` is true; jumps straight to the value under reduced motion. */
-export function useCountUp(target: number, active: boolean, durationMs = 700): number {
+/**
+ * Counts to `target` once `active` is true: from 0 the first time, then from the number on screen
+ * whenever the target changes. `delayMs` holds the old number first, so it can land together with
+ * another animation. Reduced motion (or no rAF) shows the final value straight away.
+ */
+export function useCountUp(target: number, active: boolean, durationMs = 700, delayMs = 0): number {
   const [value, setValue] = useState(0)
+  const shown = useRef(0)
   // Reduced motion (or no rAF): show the final value straight away, without animating.
   const instant = active && (prefersReducedMotion() || typeof requestAnimationFrame === 'undefined')
 
   useEffect(() => {
-    if (!active || instant) return
+    if (instant) {
+      shown.current = target
+      return
+    }
+    if (!active) return
     let frame = 0
-    const start = performance.now()
+    const from = shown.current
+    const start = performance.now() + delayMs
     const tick = (now: number) => {
-      const t = Math.min(1, (now - start) / durationMs)
+      const t = Math.max(0, Math.min(1, (now - start) / durationMs))
       const eased = 1 - Math.pow(1 - t, 3) // ease out cubic
-      setValue(Math.round(target * eased))
+      shown.current = Math.round(from + (target - from) * eased)
+      setValue(shown.current)
       if (t < 1) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [target, active, instant, durationMs])
+  }, [target, active, instant, durationMs, delayMs])
 
   return instant ? target : value
 }
@@ -65,6 +76,8 @@ export const motion = {
   pop: 'motion-pop',
   sheen: 'motion-sheen',
   meter: 'motion-meter',
+  /** Opts an element out of the global reduced motion clamp; it must define its own opacity only fallback. */
+  keep: 'motion-keep',
 } as const
 
 /** Live reduced motion preference, for components that render a different static state. */

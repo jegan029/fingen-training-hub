@@ -176,10 +176,12 @@
   outline-offset: 2px;
 }
 
+/* Safety net for reduced motion. Elements marked .motion-keep (roadmap feedback) define their own
+   opacity only alternative, so the confirmation of an action is not lost. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *:not(.motion-keep),
+  *:not(.motion-keep)::before,
+  *:not(.motion-keep)::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
