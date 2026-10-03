@@ -247,7 +247,9 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - [x] Source chips fade in after the reply. Path mode: the path the tutor answered from plus the topics the answer names (`pathSources`; the API lists every topic in the path, which is not a citation). Article mode: the KB article
 
 ### Phase G: Analytics
-- [ ] Onboarding at a glance hero, stat tickers, animated per path chart with a data table
+- [x] "Onboarding at a glance": completion per path as concentric rings filling outer first, the average counting up in the centre, a text legend with every value; average score per path as bars that grow when scrolled into view. Built from every path's analytics with `Promise.allSettled` (a failed path shows "Unavailable")
+- [x] Per path stats count up (`Ticker`, decimals kept, final value in hidden text)
+- Changed from the plan: no hidden data table, because the legend and bar rows already show every value as text
 
 ### Phase H: Finish
 - [ ] Tests, batched visual check (1440 and 390, both themes, reduced motion), detector, finish review, DESIGN.md, docs, PR

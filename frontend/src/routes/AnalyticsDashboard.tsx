@@ -4,7 +4,8 @@ import { fetchAnalytics, fetchRoadmaps } from '../api'
 import type { AnalyticsSummary, LearningPath } from '../types'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
-import { meterStyle } from '../lib/motion'
+import OnboardingGlance, { type GlanceItem } from '../components/analytics/OnboardingGlance'
+import { meterStyle, useCountUp } from '../lib/motion'
 import page from '../styles/page.module.css'
 import styles from './AnalyticsDashboard.module.css'
 
@@ -19,17 +20,49 @@ function scoreTone(score: number | null): Tone {
   return score >= 7 ? 'good' : score >= 5 ? 'fair' : 'poor'
 }
 
+/** A stat that counts up to its value; decimals are kept (an average of 3.5 topics counts to 3.5). */
+function Ticker({ value, decimals = 0, suffix = '' }: { value: number; decimals?: number; suffix?: string }) {
+  const scale = 10 ** decimals
+  const shown = useCountUp(Math.round(value * scale), true) / scale
+  return (
+    <>
+      <span aria-hidden="true">
+        {shown.toFixed(decimals)}
+        {suffix}
+      </span>
+      <span className={page.srOnly}>
+        {value.toFixed(decimals)}
+        {suffix}
+      </span>
+    </>
+  )
+}
+
 export default function AnalyticsDashboard() {
   const { pathId } = useParams<{ pathId: string }>()
   const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null)
   const [paths, setPaths] = useState<LearningPath[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [glance, setGlance] = useState<GlanceItem[] | null>(null)
 
   useEffect(() => {
     fetchRoadmaps()
       .then(setPaths)
       .catch(() => {})
   }, [])
+
+  // Every path's analytics for the overview; a path that fails shows as unavailable instead of hiding the rest.
+  useEffect(() => {
+    if (paths.length === 0) return
+    Promise.allSettled(paths.map((p) => fetchAnalytics(p.id))).then((results) =>
+      setGlance(
+        paths.map((p, i) => {
+          const r = results[i]
+          return { id: p.id, title: p.title, summary: r.status === 'fulfilled' ? r.value : null }
+        }),
+      ),
+    )
+  }, [paths])
 
   // No state reset needed when pathId changes: App remounts each page on a new pathname.
   useEffect(() => {
@@ -44,10 +77,20 @@ export default function AnalyticsDashboard() {
 
   const stats = analytics
     ? [
-        { value: analytics.completed_nodes, label: 'Avg. topics done per learner', tone: 'neutral' as Tone },
-        { value: analytics.learners, label: 'Learners', tone: 'neutral' as Tone },
-        { value: `${pct}%`, label: 'Completion rate, all learners', tone: rateTone(pct) },
-        { value: score?.toFixed(1) ?? 'None yet', label: 'Avg. score out of 10', tone: scoreTone(score) },
+        {
+          value: (
+            <Ticker value={analytics.completed_nodes} decimals={Number.isInteger(analytics.completed_nodes) ? 0 : 1} />
+          ),
+          label: 'Avg. topics done per learner',
+          tone: 'neutral' as Tone,
+        },
+        { value: <Ticker value={analytics.learners} />, label: 'Learners', tone: 'neutral' as Tone },
+        { value: <Ticker value={pct} suffix="%" />, label: 'Completion rate, all learners', tone: rateTone(pct) },
+        {
+          value: score === null ? 'None yet' : <Ticker value={score} decimals={1} />,
+          label: 'Avg. score out of 10',
+          tone: scoreTone(score),
+        },
       ]
     : []
 
@@ -57,6 +100,8 @@ export default function AnalyticsDashboard() {
         <h1 className={page.title}>Analytics</h1>
         <p className={page.lead}>Cohort progress and assessment performance for each training path.</p>
       </header>
+
+      {glance && <OnboardingGlance items={glance} />}
 
       {paths.length > 0 && (
         <nav className={styles.tabs} aria-label="Training path">
