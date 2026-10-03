@@ -220,7 +220,7 @@ class CertificateStatus(BaseModel):
 
 
 class SearchResult(BaseModel):
-    kind: Literal["path", "node", "subtopic", "runbook"]
+    kind: Literal["path", "node", "subtopic", "runbook", "article", "application", "document"]
     id: str
     title: str
     subtitle: str
@@ -254,3 +254,172 @@ class AdminUser(BaseModel):
     last_active: str | None
     paths: list[AdminUserPath]
     overall_pct: int
+
+
+# ── ServiceNow knowledge ────────────────────────────────────
+
+ArticleKind = Literal["runbook", "sop", "other"]
+
+
+class ApplicationRef(BaseModel):
+    id: int
+    app_number: str
+    name: str
+
+
+class ArticleSummary(BaseModel):
+    id: int
+    kb_number: str
+    title: str
+    summary: str
+    classification: Level
+    kind: ArticleKind
+    category: str | None
+    knowledge_base: str | None
+    version: str | None
+    source_updated_at: str | None
+    synced_at: str | None
+    applications: list[ApplicationRef]
+    source: Literal["servicenow"] = "servicenow"
+
+
+class Facet(BaseModel):
+    value: str
+    label: str
+    count: int
+
+
+class ArticleFacets(BaseModel):
+    classifications: list[Facet]
+    kinds: list[Facet]
+    categories: list[Facet]
+    applications: list[Facet]
+
+
+class ArticlePage(BaseModel):
+    items: list[ArticleSummary]
+    total: int
+    page: int
+    page_size: int
+    facets: ArticleFacets
+
+
+class DocumentRef(BaseModel):
+    id: int
+    file_name: str
+    content_type: str
+    size_bytes: int
+    article_id: int
+    kb_number: str
+    article_title: str
+
+
+class LinkedArticle(BaseModel):
+    id: int
+    kb_number: str
+    title: str
+
+
+class RelatedNode(BaseModel):
+    id: int
+    title: str
+    path_id: int
+    path_title: str
+
+
+class ArticleDetail(ArticleSummary):
+    body_markdown: str
+    source_url: str | None
+    # False when the classification is above the LLM ceiling: the AI Tutor will refuse it.
+    llm_allowed: bool
+    documents: list[DocumentRef]
+    linked_articles: list[LinkedArticle]
+    related_nodes: list[RelatedNode]
+
+
+class ArticleLookup(BaseModel):
+    id: int
+
+
+class ApplicationCounts(BaseModel):
+    runbooks: int
+    sops: int
+    other: int
+    documents: int
+
+
+class ApplicationSummary(BaseModel):
+    id: int
+    app_number: str
+    name: str
+    description: str
+    counts: ApplicationCounts
+
+
+class ApplicationDetail(ApplicationSummary):
+    runbooks: list[ArticleSummary]
+    sops: list[ArticleSummary]
+    other: list[ArticleSummary]
+    documents: list[DocumentRef]
+
+
+class KnowledgeStatus(BaseModel):
+    """What learners need for the stale and unreachable banners; no operational detail."""
+
+    enabled: bool
+    stale: bool
+    unreachable: bool
+    last_success_at: str | None
+
+
+class SyncRun(BaseModel):
+    id: int
+    started_at: str
+    finished_at: str | None
+    mode: Literal["incremental", "full"]
+    trigger: str
+    status: Literal["running", "success", "partial", "failed"]
+    articles_seen: int
+    articles_created: int
+    articles_updated: int
+    articles_unchanged: int
+    articles_retired: int
+    articles_failed: int
+    documents_downloaded: int
+    documents_rejected: int
+    error_summary: str | None
+
+
+class SyncStarted(BaseModel):
+    run_id: int
+    mode: Literal["incremental", "full"]
+    status: Literal["running"] = "running"
+
+
+class ServiceNowCounts(BaseModel):
+    articles_active: int
+    articles_inactive: int
+    by_classification: dict[str, int]
+    applications: int
+    documents: int
+
+
+class ServiceNowStatus(BaseModel):
+    enabled: bool
+    mock_mode: bool
+    auth_mode: str
+    instance_host: str | None
+    scheduler_running: bool
+    sync_interval_minutes: int
+    running: bool
+    last_run: SyncRun | None
+    last_success_at: str | None
+    next_incremental: str | None
+    next_full: str | None
+    counts: ServiceNowCounts
+
+
+class NodeLinkResult(BaseModel):
+    article_id: int
+    node_id: int
+    linked: bool

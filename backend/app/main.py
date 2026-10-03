@@ -20,6 +20,7 @@ from .routers import (
     auth,
     certificate,
     chat,
+    knowledge,
     progress,
     roadmap,
     runbooks,
@@ -86,7 +87,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type", CSRF_HEADER],
 )
 app.add_middleware(SecurityHeadersMiddleware)
@@ -100,6 +101,7 @@ app.include_router(progress.router, prefix="/api/progress", tags=["Progress"], d
 app.include_router(assessment.router, prefix="/api/assessments", tags=["Assessments"], dependencies=authenticated)
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"], dependencies=authenticated)
 app.include_router(runbooks.router, prefix="/api/runbooks", tags=["Runbooks"], dependencies=authenticated)
+app.include_router(knowledge.router, prefix="/api/knowledge", tags=["Knowledge"], dependencies=authenticated)
 app.include_router(search.router, prefix="/api/search", tags=["Search"], dependencies=authenticated)
 app.include_router(certificate.router, prefix="/api/certificate", tags=["Certificate"], dependencies=authenticated)
 app.include_router(analytics.router, prefix="/api/analytics", tags=["Analytics"], dependencies=admin_only)

@@ -1,6 +1,17 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, FileText, GitBranch, ListTree, Search, Waypoints, type LucideIcon } from 'lucide-react'
+import {
+  ArrowRight,
+  BookOpen,
+  Boxes,
+  FileText,
+  GitBranch,
+  ListTree,
+  Paperclip,
+  Search,
+  Waypoints,
+  type LucideIcon,
+} from 'lucide-react'
 import { searchAll } from '../api'
 import type { SearchResult } from '../types'
 import styles from './CommandPalette.module.css'
@@ -20,6 +31,9 @@ const ICONS: Record<Item['kind'], LucideIcon> = {
   node: GitBranch,
   subtopic: ListTree,
   runbook: FileText,
+  article: BookOpen,
+  application: Boxes,
+  document: Paperclip,
 }
 
 const KIND_LABEL: Record<Item['kind'], string> = {
@@ -28,6 +42,9 @@ const KIND_LABEL: Record<Item['kind'], string> = {
   node: 'Topic',
   subtopic: 'Subtopic',
   runbook: 'Runbook',
+  article: 'Article',
+  application: 'Application',
+  document: 'Document',
 }
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)

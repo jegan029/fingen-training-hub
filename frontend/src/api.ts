@@ -1,5 +1,17 @@
 import type {
+  AccessLogEntry,
   AdminUser,
+  ApplicationDetail,
+  ApplicationSummary,
+  ArticleDetail,
+  ArticlePage,
+  ArticleQuery,
+  Classification,
+  KnowledgeStatus,
+  ServiceNowStatus,
+  SyncMode,
+  SyncRun,
+  SyncStarted,
   AnalyticsSummary,
   AssessmentQuestion,
   AssessmentResult,
@@ -167,4 +179,79 @@ export async function fetchProgressSummary() {
 
 export async function fetchCertificate() {
   return request<CertificateStatus>('/certificate')
+}
+
+/* ── ServiceNow knowledge ───────────────────────────────── */
+
+export async function chatAboutArticle(articleId: number, message: string) {
+  return request<ChatResponse>('/chat/query', {
+    method: 'POST',
+    body: JSON.stringify({ article_id: articleId, message }),
+  })
+}
+
+/** Query string from defined, non empty values only. */
+function queryString(params: object): string {
+  const search = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') search.set(key, String(value))
+  }
+  const text = search.toString()
+  return text ? `?${text}` : ''
+}
+
+export async function fetchArticles(query: ArticleQuery = {}) {
+  return request<ArticlePage>(`/knowledge/articles${queryString(query)}`)
+}
+
+export async function fetchArticle(articleId: number) {
+  return request<ArticleDetail>(`/knowledge/articles/${articleId}`)
+}
+
+export async function lookupArticle(kbNumber: string) {
+  return request<{ id: number }>(`/knowledge/articles/by-number/${encodeURIComponent(kbNumber)}`)
+}
+
+export async function fetchApplications() {
+  return request<ApplicationSummary[]>('/knowledge/applications')
+}
+
+export async function fetchApplication(applicationId: number) {
+  return request<ApplicationDetail>(`/knowledge/applications/${applicationId}`)
+}
+
+/** Same origin URL that streams a document after the server side access check. */
+export function documentDownloadUrl(documentId: number): string {
+  return `${BASE_URL}/knowledge/documents/${documentId}/download`
+}
+
+export async function fetchKnowledgeStatus() {
+  return request<KnowledgeStatus>('/knowledge/status')
+}
+
+export async function fetchServiceNowStatus() {
+  return request<ServiceNowStatus>('/admin/servicenow/status')
+}
+
+export async function startServiceNowSync(mode: SyncMode) {
+  return request<SyncStarted>(`/admin/servicenow/sync?mode=${mode}`, { method: 'POST' })
+}
+
+export async function fetchSyncRuns(limit = 20) {
+  return request<SyncRun[]>(`/admin/servicenow/runs?limit=${limit}`)
+}
+
+export async function fetchSyncRun(runId: number) {
+  return request<SyncRun>(`/admin/servicenow/runs/${runId}`)
+}
+
+export async function fetchAccessLog(limit = 50) {
+  return request<AccessLogEntry[]>(`/admin/servicenow/audit?limit=${limit}`)
+}
+
+export async function setUserClearance(userId: number, level: Classification) {
+  return request<{ id: number; max_classification: Classification }>(`/admin/users/${userId}/clearance`, {
+    method: 'PUT',
+    body: JSON.stringify({ max_classification: level }),
+  })
 }

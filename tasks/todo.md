@@ -158,8 +158,20 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - Scope note: lesson content (roadmap nodes) is the training curriculum and stays unclassified; classification covers knowledge articles, documents, runbooks, search and tutor article context. The knowledge endpoints (Phase 5) reuse `get_visible_article` and `visible_sql`.
 
 ### Phase 5: API
-- [ ] /api/knowledge/* and /api/admin/servicenow/*, schemas and types.ts
-- [ ] Tests
+- [x] `/api/knowledge`: articles (q, classification, app_number, application_id, article_type, category, node_id, paging up to 50, sort by updated or title) with facets over what the user can see; article detail (applications, documents, visible linked articles, related nodes, ServiceNow link, `llm_allowed`); lookup by KB number; applications with counts and grouped detail; document download (streamed through the backend, attachment disposition, verified type, nosniff); learner status (stale, unreachable)
+- [x] `/api/admin/servicenow`: status (no secrets, instance host only in live mode), sync (background task, 202 with run id, 409 while running, rate limited), runs and one run, read only mapping, audit, manual node links (POST and DELETE, admin's own clearance applies)
+- [x] Command palette search adds articles, applications and documents within clearance; ServiceNow runbooks open their article
+- [x] Views and downloads of confidential and restricted content are audited
+- [x] CORS allows DELETE (CSRF already covers it)
+- [x] schemas.py models; types.ts and api.ts mirrors; palette icons for the new kinds
+- [x] Tests: 37
+
+### Phase 5 review
+- 256 pytest, 43 Vitest; ruff, format, bandit, pip-audit, ESLint, Prettier, tsc, build, dash check, gitleaks clean.
+- Mutation check: removing the clearance condition from the knowledge service or from knowledge search fails tests.
+- Live: admin started a full sync over HTTP (202, run finished in the background), learner searched, downloaded a PDF (attachment, application/pdf, nosniff, real bytes), got 404 for a restricted document and 403 on an admin link endpoint.
+- Found while testing: a corrupted storage path raised a ValueError (a 500 in production, refused before any file access). Now a 404.
+- Decisions: `article_type` filters by purpose (runbook, sop, other), since ServiceNow's own article_type is only the format; linked articles the reader cannot see, or that were never synced, are left out of the detail entirely; applications with no visible article are hidden (404).
 
 ### Phase 6: Frontend
 - [ ] Knowledge Library, article page, applications, runbook source filter, drawer section, palette, admin panel, states

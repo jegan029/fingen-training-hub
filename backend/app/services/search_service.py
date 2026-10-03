@@ -14,7 +14,7 @@ def _like(query: str) -> str:
 
 
 class SearchService:
-    """Title and description search across paths, nodes, subtopics and runbooks for the command palette."""
+    """Search for the command palette: paths, nodes, subtopics, runbooks and (within clearance) knowledge."""
 
     def search(self, query: str, clearance: str | None) -> list[dict]:
         query = " ".join(query.split())
@@ -45,12 +45,37 @@ class SearchService:
             visible, levels = visible_sql_named("r.classification", clearance)
             # Only the level condition is interpolated; its values are bound parameters.
             runbooks = conn.execute(
-                f"""SELECT r.id, r.title, r.category FROM runbooks r
+                f"""SELECT r.id, r.title, r.category, r.kb_article_id FROM runbooks r
                    WHERE (r.title LIKE :q ESCAPE '\\' OR r.description LIKE :q ESCAPE '\\'
                           OR r.category LIKE :q ESCAPE '\\')
                      AND {visible} AND {RUNBOOK_LIVE}
                    ORDER BY r.title LIKE :q ESCAPE '\\' DESC, r.id LIMIT :n""",  # nosec B608
                 {"q": pattern, "n": PER_KIND, **levels},
+            ).fetchall()
+            visible_k, levels_k = visible_sql_named("k.classification", clearance)
+            live = f"k.active = 1 AND {visible_k}"
+            articles = conn.execute(
+                f"""SELECT k.id, k.kb_number, k.title FROM kb_articles k
+                   WHERE (k.title LIKE :q ESCAPE '\\' OR k.kb_number LIKE :q ESCAPE '\\'
+                          OR k.summary LIKE :q ESCAPE '\\') AND {live}
+                     AND NOT EXISTS (SELECT 1 FROM runbooks r WHERE r.kb_article_id = k.id)
+                   ORDER BY k.title LIKE :q ESCAPE '\\' DESC, k.id LIMIT :n""",  # nosec B608
+                {"q": pattern, "n": PER_KIND, **levels_k},
+            ).fetchall()
+            # Only applications with at least one article this user can see.
+            applications = conn.execute(
+                f"""SELECT DISTINCT a.id, a.app_number, a.name FROM applications a
+                   JOIN article_applications aa ON aa.application_id = a.id JOIN kb_articles k ON k.id = aa.article_id
+                   WHERE (a.name LIKE :q ESCAPE '\\' OR a.app_number LIKE :q ESCAPE '\\') AND a.active = 1 AND {live}
+                   ORDER BY a.app_number LIMIT :n""",  # nosec B608
+                {"q": pattern, "n": PER_KIND, **levels_k},
+            ).fetchall()
+            documents = conn.execute(
+                f"""SELECT d.id, d.file_name, d.article_id, k.kb_number FROM article_documents d
+                   JOIN kb_articles k ON k.id = d.article_id
+                   WHERE d.kind = 'attachment' AND d.file_name LIKE :q ESCAPE '\\' AND {live}
+                   ORDER BY d.file_name LIMIT :n""",  # nosec B608
+                {"q": pattern, "n": PER_KIND, **levels_k},
             ).fetchall()
 
         results: list[dict] = []
@@ -90,8 +115,39 @@ class SearchService:
                 "id": f"runbook-{r['id']}",
                 "title": r["title"],
                 "subtitle": r["category"],
-                "url": f"/runbooks?open={r['id']}",
+                # ServiceNow runbooks are read only articles: open the article page.
+                "url": f"/knowledge/{r['kb_article_id']}" if r["kb_article_id"] else f"/runbooks?open={r['id']}",
             }
             for r in runbooks
+        ]
+        results += [
+            {
+                "kind": "article",
+                "id": f"article-{r['id']}",
+                "title": r["title"],
+                "subtitle": r["kb_number"],
+                "url": f"/knowledge/{r['id']}",
+            }
+            for r in articles
+        ]
+        results += [
+            {
+                "kind": "application",
+                "id": f"application-{r['id']}",
+                "title": r["name"],
+                "subtitle": r["app_number"],
+                "url": f"/applications/{r['id']}",
+            }
+            for r in applications
+        ]
+        results += [
+            {
+                "kind": "document",
+                "id": f"document-{r['id']}",
+                "title": r["file_name"],
+                "subtitle": r["kb_number"],
+                "url": f"/knowledge/{r['article_id']}",
+            }
+            for r in documents
         ]
         return results
