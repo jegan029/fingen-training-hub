@@ -5,7 +5,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 11rem auto;
+  grid-template-columns: 9.5rem auto;
   align-items: center;
   gap: var(--space-3);
 }
