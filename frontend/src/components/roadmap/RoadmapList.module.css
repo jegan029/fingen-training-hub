@@ -10,7 +10,7 @@
 }
 
 .item {
-  composes: rise from '../../styles/motion.module.css';
+  composes: motion-rise from global;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

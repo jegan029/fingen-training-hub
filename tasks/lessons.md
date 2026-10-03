@@ -18,3 +18,7 @@
 - When a test inspects an LLM prompt, record the system prompt and the user prompt separately: the system prompt names the delimiter tags, so counting or splitting on tags over both gives false failures.
 - When a scripted multi file edit fails part way, check which files actually changed before running tests: a Playwright run passed while its config edit had not applied, only because development defaults happened to match. Passing for the wrong reason hides flakiness (here, a scheduler racing the test).
 - Screen reader only text after visible text needs an explicit `{' '}` before the hidden span; a space inside the span is dropped from the accessible name ("Downloadposting-flow.pdf"). Assert link names in tests.
+- Never link a real folder (junction or symlink) into a temporary git worktree: `git worktree remove --force` followed the junction and deleted part of the real `node_modules`. Copy what the worktree needs, or remove the link itself first (`[System.IO.Directory]::Delete(link)`) and only then the worktree; afterwards check with `npm ls`.
+- Keep scratch screenshot specs outside `e2e/` while running the real suite: extra sign ins in parallel workers hit the login rate limit and failed unrelated tests. A failing gate in a `;` chain still lets the commit through; chain gates with `&&` or check the result before committing.
+- `composes: x from './shared.module.css'` copies the whole shared file into every chunk that composes from it. For classes many modules share, load one global stylesheet and use `composes: x from global`.
+

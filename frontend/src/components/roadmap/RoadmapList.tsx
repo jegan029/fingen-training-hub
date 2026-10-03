@@ -1,9 +1,8 @@
 import type { NodeSummary } from '../../types'
-import { staggerStyle } from '../../lib/motion'
+import { motion, staggerStyle } from '../../lib/motion'
 import { sectionFor } from './layout'
 import { StatusIcon, statusText } from './status'
 import type { StatusChange } from './statusChange'
-import motion from '../../styles/motion.module.css'
 import styles from './RoadmapList.module.css'
 
 interface RoadmapListProps {

@@ -22,6 +22,9 @@ test('learner signs in, opens a path, marks a topic done and sees progress updat
   await page.keyboard.press('d')
 
   await expect(drawer.getByRole('button', { name: /Done/, pressed: true })).toBeVisible()
+  // The completion moment is announced, and the next topic unlocks on the roadmap.
+  await expect(drawer.getByRole('status').filter({ hasText: /marked done\. .+ unlocked\./ })).toBeAttached()
+  await expect(page.getByRole('button', { name: /^2\. .*, Pending$/ })).toBeVisible()
   await expect(progress).toHaveAttribute('aria-valuenow', '10')
   await expect(page.getByRole('list', { name: 'Status counts' })).toContainText('Done 1')
 

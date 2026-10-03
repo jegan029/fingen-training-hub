@@ -1,41 +1,42 @@
 /*
- * Shared motion. Use a class directly, or compose it into a module class:
- *   .card { composes: rise from '../styles/motion.module.css'; }
- * Set --i on an element (see staggerStyle in lib/motion.ts) to delay it by --i steps of --stagger-step,
- * or --delay for an exact delay. Animations fill backwards only: once finished they let go of transform,
- * so hover and transitions keep working. Reduced motion shows the final state straight away.
+ * Shared motion classes, loaded once globally (main.tsx). Use them from TSX through `motion` in
+ * lib/motion.ts, or compose them into a module class: `.card { composes: motion-rise from global; }`.
+ * (Composing from a module file would copy the whole file into every chunk that does it.)
+ * Set --i on an element (see staggerStyle) to delay it by --i steps of --stagger-step, or --delay for
+ * an exact delay. Animations fill backwards only: once finished they let go of transform, so hover and
+ * transitions keep working. Reduced motion shows the final state straight away.
  */
 
-.fadeIn {
-  animation: fadeIn var(--motion-base) var(--ease-out) backwards;
+.motion-fade-in {
+  animation: motion-kf-fade-in var(--motion-base) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
-.rise {
-  animation: rise var(--motion-slow) var(--ease-out) backwards;
+.motion-rise {
+  animation: motion-kf-rise var(--motion-slow) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
 /* Arrives from the reading end, like a message you just sent. */
-.fromEnd {
-  animation: fromEnd var(--motion-base) var(--ease-out) backwards;
+.motion-from-end {
+  animation: motion-kf-from-end var(--motion-base) var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
 /* Something arrived or finished: a check, a score, a badge. */
-.pop {
-  animation: pop var(--motion-slow) var(--ease-emphasis) backwards;
+.motion-pop {
+  animation: motion-kf-pop var(--motion-slow) var(--ease-emphasis) backwards;
   animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
 /* Loading placeholder: a sheen sweeps across with transform only, no repaint of the block itself. */
-.sheen {
+.motion-sheen {
   position: relative;
   overflow: hidden;
   background: var(--color-surface-2);
 }
 
-.sheen::after {
+.motion-sheen::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -46,71 +47,71 @@
     transparent 100%
   );
   transform: translateX(-100%);
-  animation: sheen 1.4s var(--ease-in-out) infinite;
+  animation: motion-kf-sheen 1.4s var(--ease-in-out) infinite;
 }
 
 /*
  * Progress fill inside a track with overflow: hidden. Set --p (0 to 1) with meterStyle(pct).
  * It slides in from the left when first shown, then follows changes; the rounded end stays round.
  */
-.meter {
+.motion-meter {
   display: block;
   width: 100%;
   transform: translateX(calc((var(--p, 0) - 1) * 100%));
   transition: transform var(--motion-slow) var(--ease-out);
-  animation: meterIn var(--motion-draw) var(--ease-out) backwards;
+  animation: motion-kf-meter-in var(--motion-draw) var(--ease-out) backwards;
 }
 
-@keyframes meterIn {
+@keyframes motion-kf-meter-in {
   from {
     transform: translateX(-100%);
   }
 }
 
-@keyframes fadeIn {
+@keyframes motion-kf-fade-in {
   from {
     opacity: 0;
   }
 }
 
-@keyframes rise {
+@keyframes motion-kf-rise {
   from {
     opacity: 0;
     transform: translateY(8px);
   }
 }
 
-@keyframes fromEnd {
+@keyframes motion-kf-from-end {
   from {
     opacity: 0;
     transform: translateX(12px);
   }
 }
 
-@keyframes pop {
+@keyframes motion-kf-pop {
   from {
     opacity: 0;
     transform: scale(0.6);
   }
 }
 
-@keyframes sheen {
+@keyframes motion-kf-sheen {
   to {
     transform: translateX(100%);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fadeIn,
-  .rise,
-  .fromEnd,
-  .pop,
-  .meter {
+  .motion-fade-in,
+  .motion-rise,
+  .motion-from-end,
+  .motion-pop,
+  .motion-meter {
     animation: none;
     transition: none;
   }
 
-  .sheen::after {
+  .motion-sheen::after {
     display: none;
   }
 }

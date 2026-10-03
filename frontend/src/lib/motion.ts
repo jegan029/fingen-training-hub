@@ -57,6 +57,16 @@ export function useCountUp(target: number, active: boolean, durationMs = 700): n
   return instant ? target : value
 }
 
+/** Class names of the shared motion classes in styles/motion.css. */
+export const motion = {
+  fadeIn: 'motion-fade-in',
+  rise: 'motion-rise',
+  fromEnd: 'motion-from-end',
+  pop: 'motion-pop',
+  sheen: 'motion-sheen',
+  meter: 'motion-meter',
+} as const
+
 /** Live reduced motion preference, for components that render a different static state. */
 export function usePrefersReducedMotion(): boolean {
   return useMediaQuery('(prefers-reduced-motion: reduce)')

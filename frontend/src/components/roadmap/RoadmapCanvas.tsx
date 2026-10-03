@@ -3,8 +3,8 @@ import type { NodeSummary } from '../../types'
 import { layoutRoadmap } from './layout'
 import { StatusIcon, statusText } from './status'
 import type { StatusChange } from './statusChange'
-import motion from '../../styles/motion.module.css'
 import styles from './RoadmapCanvas.module.css'
+import { motion } from '../../lib/motion'
 
 interface RoadmapCanvasProps {
   nodes: NodeSummary[]

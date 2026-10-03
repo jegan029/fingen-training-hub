@@ -60,7 +60,7 @@
 }
 
 .fill {
-  composes: meter from '../styles/motion.module.css';
+  composes: motion-meter from global;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--color-accent);
@@ -118,5 +118,5 @@
   width: 240px;
   height: 52px;
   border-radius: var(--radius-md);
-  composes: sheen from '../styles/motion.module.css';
+  composes: motion-sheen from global;
 }

@@ -84,7 +84,7 @@
 
 /* ── Section labels on the spine ────────────── */
 .section {
-  composes: fadeIn from '../../styles/motion.module.css';
+  composes: motion-fade-in from global;
   --delay: calc(var(--at, 0) * var(--motion-draw));
   position: absolute;
   transform: translate(-50%, -50%);
@@ -101,7 +101,7 @@
 
 /* ── Main topics ────────────────────────────── */
 .main {
-  composes: rise from '../../styles/motion.module.css';
+  composes: motion-rise from global;
   --delay: calc(var(--at, 0) * var(--motion-draw));
   position: absolute;
   display: flex;
@@ -220,7 +220,7 @@
 
 /* ── Subtopics ──────────────────────────────── */
 .sub {
-  composes: fadeIn from '../../styles/motion.module.css';
+  composes: motion-fade-in from global;
   --delay: calc(var(--at, 0) * var(--motion-draw) + var(--motion-fast));
   position: absolute;
   display: flex;

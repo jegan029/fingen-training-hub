@@ -210,7 +210,7 @@
 }
 
 .barFill {
-  composes: meter from '../../styles/motion.module.css';
+  composes: motion-meter from global;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--tone);

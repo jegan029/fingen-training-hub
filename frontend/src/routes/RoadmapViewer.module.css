@@ -72,7 +72,7 @@
 }
 
 .card {
-  composes: rise from '../styles/motion.module.css';
+  composes: motion-rise from global;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -148,7 +148,7 @@
 .skeleton {
   height: 132px;
   border-radius: var(--radius-md);
-  composes: sheen from '../styles/motion.module.css';
+  composes: motion-sheen from global;
 }
 
 .error {
