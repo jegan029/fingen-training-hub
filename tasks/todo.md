@@ -228,7 +228,9 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - Kept as is: the four state treatments were already distinct (icon, text, border style, fill), so no new looping effect was added for in progress
 
 ### Phase C: Path list
-- [ ] Staggered cards, progress ring counting up, hover and focus depth, ambient lattice showing overall progress
+- [x] Path cards rise in with a stagger; existing hover and focus depth kept
+- [x] `ui/ProgressRing`: arc fills while the number counts up (stroke dash offset, the one paint only exception), progressbar semantics kept, final value under reduced motion
+- [x] `ProgressLattice` header graphic: one dotted track per path lit up to the topics done (hidden from assistive technology, dropped below 720 px)
 
 ### Phase D: Lesson page
 - [ ] Drawer title morphs into the lesson heading; lesson sections reveal on scroll

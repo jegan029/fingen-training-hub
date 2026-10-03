@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { meterStyle, navigateWithTransition, useCountUp } from '../lib/motion'
 import HomePage from '../routes/HomePage'
+import ProgressRing from '../components/ui/ProgressRing'
 import * as api from '../api'
 
 function mockMatchMedia(reduce: boolean) {
@@ -121,5 +122,21 @@ describe('meterStyle', () => {
     expect(meterStyle(40)).toEqual({ '--p': 0.4 })
     expect(meterStyle(140)).toEqual({ '--p': 1 })
     expect(meterStyle(-5)).toEqual({ '--p': 0 })
+  })
+})
+
+describe('ProgressRing', () => {
+  it('shows the final value at once under reduced motion and exposes it as a progress bar', () => {
+    mockMatchMedia(true)
+    render(<ProgressRing value={40} label="Platform Core progress" />)
+    const bar = screen.getByRole('progressbar', { name: 'Platform Core progress' })
+    expect(bar).toHaveAttribute('aria-valuenow', '40')
+    expect(bar).toHaveTextContent('40%')
+  })
+
+  it('clamps and rounds the value', () => {
+    mockMatchMedia(true)
+    render(<ProgressRing value={104.6} label="Over" />)
+    expect(screen.getByRole('progressbar', { name: 'Over' })).toHaveAttribute('aria-valuenow', '100')
   })
 })

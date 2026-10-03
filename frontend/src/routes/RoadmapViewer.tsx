@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { ArrowLeftRight, BookMarked, LifeBuoy, Server, type LucideIcon } from 'lucide-react'
 import { fetchProgressOverview, fetchRoadmaps } from '../api'
 import type { LearningPath, PathProgress } from '../types'
+import ProgressLattice from '../components/ProgressLattice'
+import ProgressRing from '../components/ui/ProgressRing'
+import { staggerStyle } from '../lib/motion'
 import styles from './RoadmapViewer.module.css'
 
 const ICONS: Record<string, LucideIcon> = {
@@ -14,11 +17,11 @@ const ICONS: Record<string, LucideIcon> = {
 // Role based paths prepare you for a job; skill based paths go deep on one area.
 const ROLE_BASED = new Set(['l2-support-ops'])
 
-function PathCard({ path, progress }: { path: LearningPath; progress?: PathProgress }) {
+function PathCard({ path, progress, index }: { path: LearningPath; progress?: PathProgress; index: number }) {
   const Icon = ICONS[path.slug] ?? BookMarked
   const pct = progress?.pct ?? 0
   return (
-    <Link to={`/roadmaps/${path.id}`} className={styles.card}>
+    <Link to={`/roadmaps/${path.id}`} className={styles.card} style={staggerStyle(index)}>
       <span className={styles.icon}>
         <Icon size={20} aria-hidden="true" />
       </span>
@@ -26,17 +29,13 @@ function PathCard({ path, progress }: { path: LearningPath; progress?: PathProgr
         <span className={styles.cardTitle}>{path.title}</span>
         <span className={styles.cardDesc}>{path.description}</span>
         <span className={styles.meta}>{progress ? `${progress.completed} of ${progress.total} topics done` : ' '}</span>
-        <span
-          className={styles.bar}
-          role="progressbar"
-          aria-label={`${path.title} progress`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={pct}
-        >
-          <span className={styles.fill} style={{ width: `${pct}%` }} />
-        </span>
       </span>
+      {/* Mounted once progress has loaded, so the arc and number fill from 0 to the real value. */}
+      {progress ? (
+        <ProgressRing value={pct} label={`${path.title} progress`} tone={pct === 100 ? 'success' : 'accent'} />
+      ) : (
+        <span className={styles.ringPlaceholder} aria-hidden="true" />
+      )}
     </Link>
   )
 }
@@ -44,6 +43,7 @@ function PathCard({ path, progress }: { path: LearningPath; progress?: PathProgr
 export default function RoadmapViewer() {
   const [paths, setPaths] = useState<LearningPath[] | null>(null)
   const [progress, setProgress] = useState<Record<number, PathProgress>>({})
+  const [overview, setOverview] = useState<PathProgress[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -51,7 +51,10 @@ export default function RoadmapViewer() {
       .then(setPaths)
       .catch((err: Error) => setError(err.message || 'Failed to load training paths'))
     fetchProgressOverview()
-      .then((o) => setProgress(Object.fromEntries(o.paths.map((p) => [p.path_id, p]))))
+      .then((o) => {
+        setProgress(Object.fromEntries(o.paths.map((p) => [p.path_id, p])))
+        setOverview(o.paths)
+      })
       .catch(() => {})
   }, [])
 
@@ -71,8 +74,15 @@ export default function RoadmapViewer() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Training paths</h1>
-        <p className={styles.lead}>Structured onboarding modules for L2 support engineers on the Fingen platform.</p>
+        <div>
+          <h1 className={styles.title}>Training paths</h1>
+          <p className={styles.lead}>Structured onboarding modules for L2 support engineers on the Fingen platform.</p>
+        </div>
+        {overview.length > 0 && (
+          <div className={styles.lattice}>
+            <ProgressLattice paths={overview} />
+          </div>
+        )}
       </header>
 
       {error && (
@@ -102,7 +112,7 @@ export default function RoadmapViewer() {
                 </div>
                 <div className={styles.grid}>
                   {group.items.map((p) => (
-                    <PathCard key={p.id} path={p} progress={progress[p.id]} />
+                    <PathCard key={p.id} path={p} progress={progress[p.id]} index={paths.indexOf(p)} />
                   ))}
                 </div>
               </section>

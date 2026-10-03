@@ -1,0 +1,55 @@
+.lattice {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.track {
+  stroke: var(--color-border);
+  stroke-width: 2;
+  stroke-dasharray: 2 4;
+}
+
+/* Each row lights up to the topics done, a beat after the row above. */
+.lit {
+  fill: var(--color-accent);
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: grow var(--motion-draw) var(--ease-out) backwards;
+  animation-delay: calc(var(--row) * var(--stagger-step) * 2);
+}
+
+.dot {
+  fill: var(--color-bg);
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: appear var(--motion-base) var(--ease-out) backwards;
+  animation-delay: calc(var(--i) * 30ms + var(--row) * var(--stagger-step) * 2);
+}
+
+.dot[data-done] {
+  fill: var(--color-accent);
+  stroke: var(--color-accent);
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lit,
+  .dot {
+    animation: none;
+  }
+}
