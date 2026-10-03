@@ -117,6 +117,37 @@ describe('navigateWithTransition', () => {
   })
 })
 
+describe('navigateWithTransition waiting for a shared element', () => {
+  const doc = document as unknown as { startViewTransition?: unknown }
+
+  afterEach(() => {
+    delete doc.startViewTransition
+    document.body.innerHTML = ''
+  })
+
+  it('finishes while rendering is paused (no animation frames during the update)', async () => {
+    mockMatchMedia(false)
+    // Browsers pause frames during a view transition update; a frame based wait would hang.
+    vi.stubGlobal('requestAnimationFrame', () => 0)
+    let update: (() => Promise<void> | void) | undefined
+    doc.startViewTransition = vi.fn((cb: () => Promise<void> | void) => {
+      update = cb
+      return { ready: Promise.resolve() }
+    })
+    // The new page renders its heading a moment later (lazy route, data), as in the browser.
+    const navigate = vi.fn(() => {
+      setTimeout(() => {
+        const heading = document.createElement('h1')
+        heading.dataset.sharedTitle = 'node-title-1'
+        document.body.append(heading)
+      }, 30)
+    })
+    navigateWithTransition(navigate, '/learn/1', { waitFor: '[data-shared-title="node-title-1"]' })
+    await expect(update?.()).resolves.toBeUndefined()
+    expect(navigate).toHaveBeenCalledWith('/learn/1', {})
+  })
+})
+
 describe('meterStyle', () => {
   it('clamps the percentage to the track', () => {
     expect(meterStyle(40)).toEqual({ '--p': 0.4 })

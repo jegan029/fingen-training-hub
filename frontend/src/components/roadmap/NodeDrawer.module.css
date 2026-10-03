@@ -4,6 +4,12 @@
   z-index: var(--z-drawer);
   background: rgba(8, 12, 30, 0.35);
   animation: fade var(--duration-base) var(--ease-out);
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+
+/* Cleared while the roadmap plays a completion moment, then dimmed again. */
+.backdrop[data-clear] {
+  opacity: 0;
 }
 
 .drawer {

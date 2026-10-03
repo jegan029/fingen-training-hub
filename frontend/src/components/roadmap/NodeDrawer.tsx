@@ -17,6 +17,8 @@ interface NodeDrawerProps {
   onClose: () => void
   /** Result of the last status change ("X marked done. Y unlocked."), read out politely. */
   announcement?: string
+  /** True while the roadmap plays a completion moment: the backdrop clears so it can be seen. */
+  celebrating?: boolean
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])'
@@ -29,6 +31,7 @@ export default function NodeDrawer({
   onStatus,
   onClose,
   announcement = '',
+  celebrating = false,
 }: NodeDrawerProps) {
   const panel = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
@@ -81,7 +84,7 @@ export default function NodeDrawer({
 
   return (
     <>
-      <div className={styles.backdrop} onClick={onClose} aria-hidden="true" />
+      <div className={styles.backdrop} data-clear={celebrating || undefined} onClick={onClose} aria-hidden="true" />
       <div
         ref={panel}
         className={styles.drawer}

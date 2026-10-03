@@ -71,6 +71,12 @@ export default function RoadmapViewer() {
     },
   ]
 
+  // Cards appear in reading order, and the header graphic lists the paths in the same order.
+  const displayed = groups.flatMap((g) => g.items)
+  const latticeRows = displayed
+    .map((p) => overview.find((o) => o.path_id === p.id))
+    .filter((o): o is PathProgress => o !== undefined)
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -78,9 +84,9 @@ export default function RoadmapViewer() {
           <h1 className={styles.title}>Training paths</h1>
           <p className={styles.lead}>Structured onboarding modules for L2 support engineers on the Fingen platform.</p>
         </div>
-        {overview.length > 0 && (
+        {latticeRows.length > 0 && (
           <div className={styles.lattice}>
-            <ProgressLattice paths={overview} />
+            <ProgressLattice paths={latticeRows} />
           </div>
         )}
       </header>
@@ -112,7 +118,7 @@ export default function RoadmapViewer() {
                 </div>
                 <div className={styles.grid}>
                   {group.items.map((p) => (
-                    <PathCard key={p.id} path={p} progress={progress[p.id]} index={paths.indexOf(p)} />
+                    <PathCard key={p.id} path={p} progress={progress[p.id]} index={displayed.indexOf(p)} />
                   ))}
                 </div>
               </section>

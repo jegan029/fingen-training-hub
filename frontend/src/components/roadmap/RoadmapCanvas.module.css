@@ -186,12 +186,7 @@
 .main[data-status='done'] {
   background: var(--rm-done-bg);
   border-color: var(--rm-done-border);
-  color: var(--color-text-muted);
-}
-
-.main[data-status='done'] .mainTitle {
-  text-decoration: line-through;
-  text-decoration-thickness: 2px;
+  color: var(--rm-main-text);
 }
 
 .main[data-status='done'] .icon {

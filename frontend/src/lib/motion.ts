@@ -94,12 +94,14 @@ export interface TransitionOptions extends NavigateOptions {
 // How long a transition may hold the old page while the new one renders its shared element.
 const WAIT_LIMIT_MS = 300
 
+// Polls with timers: the browser pauses rendering (and so requestAnimationFrame) while a view
+// transition's update runs, so a frame based wait would never finish and the transition would time out.
 function waitForElement(selector: string, limitMs: number): Promise<void> {
   const start = performance.now()
   return new Promise((resolve) => {
     const check = () => {
       if (document.querySelector(selector) || performance.now() - start > limitMs) resolve()
-      else requestAnimationFrame(check)
+      else window.setTimeout(check, 16)
     }
     check()
   })

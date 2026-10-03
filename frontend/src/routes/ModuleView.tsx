@@ -176,6 +176,7 @@ export default function ModuleView() {
           onStatus={changeStatus}
           onClose={close}
           announcement={announcement}
+          celebrating={change?.status === 'done'}
         />
       )}
     </div>
