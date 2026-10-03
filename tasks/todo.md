@@ -174,7 +174,22 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - Decisions: `article_type` filters by purpose (runbook, sop, other), since ServiceNow's own article_type is only the format; linked articles the reader cannot see, or that were never synced, are left out of the detail entirely; applications with no visible article are hidden (404).
 
 ### Phase 6: Frontend
-- [ ] Knowledge Library, article page, applications, runbook source filter, drawer section, palette, admin panel, states
+- [x] Shared pieces: `ClassificationBadge` (icon plus text, hint on hover, screen reader prefix), `SourceTag`, `FileIcon`, `FilterChips` (aria-pressed), `StaleBanner` (stale or unreachable, role=status), `lib/format.ts`, `lib/knowledge.ts`
+- [x] `/knowledge`: debounced search, chips for classification, application, type and category (from server facets), sort, paging, all state in the URL, skeleton, empty and error states
+- [x] `/knowledge/:id`: sanitised markdown body, details panel, documents with download, linked articles, related training topics, AI Tutor button (disabled with an explanation above the LLM ceiling), View in ServiceNow (new tab, noopener); 404 page that does not confirm existence; `/knowledge/kb/:number` resolves body links
+- [x] `/applications` card grid and `/applications/:id` grouped into runbooks, SOPs, other and documents
+- [x] Runbook Library: source filter, source tag and classification badge on every card, ServiceNow cards open their article (old `?open=` links redirect)
+- [x] Roadmap drawer: Knowledge articles section (within clearance, "See all" filters the library by topic)
+- [x] AI Tutor: `?article=` mode (answers from that article only, explains when the article is above the ceiling, switch back to a path)
+- [x] Admin: ServiceNow panel (mock mode or connection, counts, last and next sync, Sync now and Full sync with polling, runs with error details, access audit) and a clearance select per user
+- [x] Markdown: in app links use the router, external links open in a new tab with noopener noreferrer; article images limited to the column
+- [x] Nav "Knowledge", footer links, palette shortcuts
+
+### Phase 6 review
+- 43 Vitest, 2 Playwright (Brave); ESLint, Prettier, tsc, build, npm audit (2 moderate, S15), dash check, gitleaks clean. No backend changes.
+- Checked in Brave against an isolated stack (temp DB, mock mode, scheduled first sync): library, filters, empty state, article (light and dark), hidden article, KB number redirect, applications, runbooks, drawer, tutor with an article, admin sync now; no horizontal overflow at 390 px; only console errors are the expected 404s for the hidden article.
+- Fixed after the screenshots: article details broke words in a two column list (now label above value); linked article icons wrapped; the clearance column was clipped in the wide users table (moved into the engineer cell); ServiceNow runbook dates used ISO format; "1 documents" plural.
+- Note: in development StrictMode loads pages twice, so one view of a confidential article writes two audit rows; production builds write one.
 
 ### Phase 7: Tests, CI, docs
 - [ ] Vitest, Playwright (mock mode), CI additions, docs/SERVICENOW_INTEGRATION.md, README, CLAUDE.md, SECURITY_REVIEW.md

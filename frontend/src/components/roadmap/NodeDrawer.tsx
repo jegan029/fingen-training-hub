@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen, ClipboardCheck, Lock, MessageSquare, Target, X, FileText } from 'lucide-react'
 import type { NodeStatus, NodeSummary } from '../../types'
+import NodeArticles from './NodeArticles'
 import { STATUS_META, STATUS_ORDER, StatusIcon, statusForKey } from './status'
 import styles from './NodeDrawer.module.css'
 
@@ -204,6 +205,8 @@ export default function NodeDrawer({ node, pathId, busy, error, onStatus, onClos
             </p>
           )}
         </section>
+
+        <NodeArticles key={node.id} nodeId={node.id} />
 
         <p className={styles.hint}>
           Shortcuts: <kbd className={styles.kbd}>D</kbd> done, <kbd className={styles.kbd}>P</kbd> in progress,{' '}

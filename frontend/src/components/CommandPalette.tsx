@@ -21,6 +21,8 @@ type Item = Pick<SearchResult, 'id' | 'title' | 'subtitle' | 'url'> & { kind: Se
 const PAGES: Item[] = [
   { kind: 'page', id: 'page-roadmaps', title: 'Training paths', subtitle: 'Go to', url: '/roadmaps' },
   { kind: 'page', id: 'page-runbooks', title: 'Runbook library', subtitle: 'Go to', url: '/runbooks' },
+  { kind: 'page', id: 'page-knowledge', title: 'Knowledge Library', subtitle: 'Go to', url: '/knowledge' },
+  { kind: 'page', id: 'page-applications', title: 'Applications', subtitle: 'Go to', url: '/applications' },
   { kind: 'page', id: 'page-chat', title: 'AI Tutor', subtitle: 'Go to', url: '/chat' },
   { kind: 'page', id: 'page-certificate', title: 'Certificate', subtitle: 'Go to', url: '/certificate' },
 ]
@@ -49,7 +51,7 @@ const KIND_LABEL: Record<Item['kind'], string> = {
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
-/** Ctrl+K / Cmd+K search across paths, topics, subtopics and runbooks (ARIA combobox + listbox). */
+/** Ctrl+K / Cmd+K search across paths, topics, subtopics, runbooks and knowledge (ARIA combobox + listbox). */
 export default function CommandPalette() {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -187,8 +189,8 @@ export default function CommandPalette() {
                 aria-controls={listId}
                 aria-autocomplete="list"
                 aria-activedescendant={activeId}
-                aria-label="Search paths, topics and runbooks"
-                placeholder="Search paths, topics and runbooks"
+                aria-label="Search paths, topics, runbooks and articles"
+                placeholder="Search paths, topics, runbooks and articles"
                 value={query}
                 maxLength={100}
                 onChange={(e) => {

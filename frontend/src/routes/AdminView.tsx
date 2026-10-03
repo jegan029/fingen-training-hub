@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, Map as MapIcon, TrendingUp, Users, type LucideIcon } from 'lucide-react'
-import { fetchAdminUsers, fetchWeakestTopics } from '../api'
+import { fetchAdminUsers, fetchWeakestTopics, setUserClearance } from '../api'
 import { useAuth } from '../context/AuthContext'
-import type { AdminUser, WeakTopic } from '../types'
+import type { AdminUser, Classification, WeakTopic } from '../types'
+import ServiceNowPanel from '../components/admin/ServiceNowPanel'
+import { CLASSIFICATION_LABEL, CLASSIFICATION_ORDER } from '../lib/knowledge'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
 import page from '../styles/page.module.css'
@@ -54,6 +56,51 @@ function SummaryCard({ icon: Icon, label, value }: { icon: LucideIcon; label: st
       </span>
       <span className={styles.summaryValue}>{value}</span>
       <span className={styles.summaryLabel}>{label}</span>
+    </div>
+  )
+}
+
+/** Highest classification a user may read. The server enforces it on their next request. */
+function ClearanceSelect({ user, onSaved }: { user: AdminUser; onSaved: (level: Classification) => void }) {
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const change = async (level: Classification) => {
+    setSaving(true)
+    setError(null)
+    try {
+      await setUserClearance(user.id, level)
+      onSaved(level)
+    } catch (err) {
+      setError((err as Error).message || 'Not saved')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className={styles.clearance}>
+      <span className={styles.clearanceLabel} aria-hidden="true">
+        Clearance
+      </span>
+      <select
+        className={`${page.input} ${styles.clearanceSelect}`}
+        aria-label={`Clearance for ${user.name}`}
+        value={user.max_classification}
+        disabled={saving}
+        onChange={(e) => change(e.target.value as Classification)}
+      >
+        {CLASSIFICATION_ORDER.map((level) => (
+          <option key={level} value={level}>
+            {CLASSIFICATION_LABEL[level]}
+          </option>
+        ))}
+      </select>
+      {error && (
+        <span className={styles.clearanceError} role="alert">
+          {error}
+        </span>
+      )}
     </div>
   )
 }
@@ -218,6 +265,16 @@ export default function AdminView() {
                                   {u.name} {isYou && <span className={BADGE.accent}>You</span>}
                                 </p>
                                 <p className={styles.sub}>{u.email}</p>
+                                <ClearanceSelect
+                                  user={u}
+                                  onSaved={(level) =>
+                                    setUsers(
+                                      (prev) =>
+                                        prev?.map((x) => (x.id === u.id ? { ...x, max_classification: level } : x)) ??
+                                        prev,
+                                    )
+                                  }
+                                />
                               </div>
                             </div>
                           </td>
@@ -257,7 +314,20 @@ export default function AdminView() {
 
       <WeakestTopics />
 
-      <p className={styles.footnote}>Read only view. Data refreshes on page load.</p>
+      <section className={styles.section} aria-labelledby="servicenow-title">
+        <h2 id="servicenow-title" className={page.sectionTitle}>
+          ServiceNow knowledge
+        </h2>
+        <p className={styles.sectionLead}>
+          Runbooks and SOPs synced read only from ServiceNow. Clearance in the table above decides which classifications
+          each person can open.
+        </p>
+        <ServiceNowPanel />
+      </section>
+
+      <p className={styles.footnote}>
+        Data refreshes on page load. Clearance changes apply on the person's next request.
+      </p>
     </div>
   )
 }

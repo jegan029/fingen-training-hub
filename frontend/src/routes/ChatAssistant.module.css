@@ -120,3 +120,35 @@
     width: 100%;
   }
 }
+
+.articleContext {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.articleIcon {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.articleText {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.articleNote {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+}

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Bot, Send } from 'lucide-react'
-import { fetchRoadmaps, chatQuery } from '../api'
-import type { LearningPath } from '../types'
+import { BookOpen, Bot, Send } from 'lucide-react'
+import { fetchRoadmaps, chatQuery, chatAboutArticle, fetchArticle } from '../api'
+import type { ArticleDetail, LearningPath } from '../types'
 import Markdown from '../components/Markdown'
 import page from '../styles/page.module.css'
 import styles from './ChatAssistant.module.css'
@@ -16,8 +16,11 @@ const MAX_MESSAGE = 2000
 
 export default function ChatAssistant() {
   const [paths, setPaths] = useState<LearningPath[]>([])
-  const [searchParams] = useSearchParams()
-  // "Ask the AI Tutor about this" links here with ?path=<id>&q=<question> to prefill the chat.
+  const [searchParams, setSearchParams] = useSearchParams()
+  // "Ask the AI Tutor about this" links here with ?path=<id>&q=<question> to prefill the chat,
+  // or with ?article=<id> from a knowledge article: the tutor then answers from that article only.
+  const articleId = Number(searchParams.get('article')) || null
+  const [article, setArticle] = useState<ArticleDetail | 'missing' | null>(null)
   const [pathId, setPathId] = useState(() => searchParams.get('path') ?? '1')
   const [input, setInput] = useState(() => (searchParams.get('q') ?? '').slice(0, MAX_MESSAGE))
   const [messages, setMessages] = useState<Message[]>([])
@@ -32,19 +35,42 @@ export default function ChatAssistant() {
   }, [])
 
   useEffect(() => {
+    if (!articleId) return
+    fetchArticle(articleId)
+      .then(setArticle)
+      .catch(() => setArticle('missing'))
+  }, [articleId])
+
+  // Derived, so a stale article from an earlier ?article= never shows for the current one.
+  const current = article && article !== 'missing' && article.id === articleId ? article : null
+  const articleMissing = articleId !== null && article === 'missing'
+  const articleBlocked = current !== null && !current.llm_allowed
+  const inputDisabled = loading || articleMissing || articleBlocked || (articleId !== null && !current)
+
+  const askAboutPath = () => {
+    setMessages([])
+    setError(null)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('article')
+      return next
+    })
+  }
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' })
   }, [messages, loading])
 
   const send = async (e?: React.FormEvent) => {
     e?.preventDefault()
     const text = input.trim()
-    if (!text || loading) return
+    if (!text || inputDisabled) return
     setInput('')
     setError(null)
     setMessages((prev) => [...prev, { role: 'user', text }])
     setLoading(true)
     try {
-      const res = await chatQuery(Number(pathId), text)
+      const res = articleId ? await chatAboutArticle(articleId, text) : await chatQuery(Number(pathId), text)
       setMessages((prev) => [...prev, { role: 'bot', text: res.answer }])
     } catch (err) {
       setError((err as Error).message || 'Request failed')
@@ -58,28 +84,55 @@ export default function ChatAssistant() {
       <header className={page.header}>
         <h1 className={page.title}>AI Tutor</h1>
         <p className={page.lead}>
-          Ask about the selected training path. Answers come only from the lessons in that path.
+          {articleId
+            ? 'Ask about the selected knowledge article. Answers come only from that article.'
+            : 'Ask about the selected training path. Answers come only from the lessons in that path.'}
         </p>
       </header>
 
-      <div className={styles.context}>
-        <label className={page.label} htmlFor="chat-path">
-          Training path
-        </label>
-        <select
-          id="chat-path"
-          className={`${page.input} ${styles.select}`}
-          value={pathId}
-          onChange={(e) => setPathId(e.target.value)}
-        >
-          {paths.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.title}
-            </option>
-          ))}
-          {paths.length === 0 && <option value={pathId}>Loading paths…</option>}
-        </select>
-      </div>
+      {articleId ? (
+        <div className={styles.articleContext}>
+          <BookOpen size={18} aria-hidden="true" className={styles.articleIcon} />
+          <p className={styles.articleText}>
+            {current ? (
+              <>
+                Asking about <strong>{current.kb_number}</strong>: {current.title}
+              </>
+            ) : articleMissing ? (
+              'This article is not available.'
+            ) : (
+              'Loading the article…'
+            )}
+          </p>
+          <button type="button" className={`${page.btn} ${page.btnSm}`} onClick={askAboutPath}>
+            Ask about a training path instead
+          </button>
+          {articleBlocked && (
+            <p className={styles.articleNote} role="status">
+              This article is above the classification the AI Tutor may use, so it cannot answer questions about it.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className={styles.context}>
+          <label className={page.label} htmlFor="chat-path">
+            Training path
+          </label>
+          <select
+            id="chat-path"
+            className={`${page.input} ${styles.select}`}
+            value={pathId}
+            onChange={(e) => setPathId(e.target.value)}
+          >
+            {paths.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.title}
+              </option>
+            ))}
+            {paths.length === 0 && <option value={pathId}>Loading paths…</option>}
+          </select>
+        </div>
+      )}
 
       {error && (
         <p className={page.error} role="alert">
@@ -125,11 +178,11 @@ export default function ChatAssistant() {
             value={input}
             maxLength={MAX_MESSAGE}
             aria-label="Your question"
-            placeholder="Ask a question about the training path"
+            placeholder={articleId ? 'Ask a question about this article' : 'Ask a question about the training path'}
             onChange={(e) => setInput(e.target.value)}
-            disabled={loading}
+            disabled={inputDisabled}
           />
-          <button type="submit" className={`${page.btn} ${page.btnPrimary}`} disabled={loading || !input.trim()}>
+          <button type="submit" className={`${page.btn} ${page.btnPrimary}`} disabled={inputDisabled || !input.trim()}>
             <Send size={16} aria-hidden="true" /> {loading ? 'Sending' : 'Send'}
           </button>
         </form>

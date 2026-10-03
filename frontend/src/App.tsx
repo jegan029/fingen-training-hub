@@ -20,6 +20,11 @@ const AssessmentPage = lazy(() => import('./routes/AssessmentPage'))
 const ScenarioAssessment = lazy(() => import('./routes/ScenarioAssessment'))
 const AnalyticsDashboard = lazy(() => import('./routes/AnalyticsDashboard'))
 const RunbookLibrary = lazy(() => import('./routes/RunbookLibrary'))
+const KnowledgeLibrary = lazy(() => import('./routes/KnowledgeLibrary'))
+const KnowledgeArticle = lazy(() => import('./routes/KnowledgeArticle'))
+const KnowledgeByNumber = lazy(() => import('./routes/KnowledgeByNumber'))
+const Applications = lazy(() => import('./routes/Applications'))
+const ApplicationDetail = lazy(() => import('./routes/ApplicationDetail'))
 const Certificate = lazy(() => import('./routes/Certificate'))
 const AdminView = lazy(() => import('./routes/AdminView'))
 const Credits = lazy(() => import('./routes/Credits'))
@@ -71,6 +76,12 @@ function Topbar() {
           <Link to="/runbooks" className={active('/runbooks')}>
             Runbooks
           </Link>
+          <Link
+            to="/knowledge"
+            className={pathname.startsWith('/knowledge') || pathname.startsWith('/applications') ? 'active' : ''}
+          >
+            Knowledge
+          </Link>
           <Link to="/chat" className={active('/chat')}>
             AI Tutor
           </Link>
@@ -121,6 +132,8 @@ function Footer() {
           <Link to="/chat">AI Tutor</Link>
           <Link to="/analytics/1">Analytics</Link>
           <Link to="/runbooks">Runbooks</Link>
+          <Link to="/knowledge">Knowledge Library</Link>
+          <Link to="/applications">Applications</Link>
           <Link to="/admin">Admin</Link>
           <Link to="/credits">Image credits</Link>
         </div>
@@ -221,6 +234,46 @@ function AppShell() {
                 element={
                   <PrivateRoute>
                     <RunbookLibrary />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/knowledge"
+                element={
+                  <PrivateRoute>
+                    <KnowledgeLibrary />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/knowledge/kb/:kbNumber"
+                element={
+                  <PrivateRoute>
+                    <KnowledgeByNumber />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/knowledge/:articleId"
+                element={
+                  <PrivateRoute>
+                    <KnowledgeArticle />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/applications"
+                element={
+                  <PrivateRoute>
+                    <Applications />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/applications/:applicationId"
+                element={
+                  <PrivateRoute>
+                    <ApplicationDetail />
                   </PrivateRoute>
                 }
               />

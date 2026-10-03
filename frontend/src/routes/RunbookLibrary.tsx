@@ -1,14 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, SearchX, X } from 'lucide-react'
 import { fetchRunbooks } from '../api'
 import type { Runbook } from '../types'
+import ClassificationBadge from '../components/knowledge/ClassificationBadge'
+import SourceTag from '../components/knowledge/SourceTag'
+import { formatDate } from '../lib/format'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
 import page from '../styles/page.module.css'
 import styles from './RunbookLibrary.module.css'
 
 const CATEGORIES = ['All', 'Transactions', 'Account & User', 'Batch & Reporting', 'Integration', 'Incident Management']
+
+type SourceFilter = 'all' | Runbook['source']
+
+const SOURCES: { value: SourceFilter; label: string }[] = [
+  { value: 'all', label: 'All sources' },
+  { value: 'local', label: 'Training Hub' },
+  { value: 'servicenow', label: 'ServiceNow' },
+]
 
 const CATEGORY_BADGE: Record<string, string> = {
   Transactions: page.badgeAccent,
@@ -110,6 +121,7 @@ function RunbookDialog({ runbook, onClose }: { runbook: Runbook; onClose: () => 
 
 export default function RunbookLibrary() {
   const [activeCategory, setActiveCategory] = useState('All')
+  const [activeSource, setActiveSource] = useState<SourceFilter>('all')
   const [search, setSearch] = useState('')
   const [runbooks, setRunbooks] = useState<Runbook[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -134,19 +146,27 @@ export default function RunbookLibrary() {
 
   const q = search.trim().toLowerCase()
   const list = runbooks ?? []
+  // ServiceNow runbooks bring their own categories (Runbook, SOP); add them after the local ones.
+  const categories = [...CATEGORIES, ...new Set(list.map((r) => r.category).filter((c) => !CATEGORIES.includes(c)))]
   const filtered = list.filter((r) => {
     const matchCat = activeCategory === 'All' || r.category === activeCategory
+    const matchSource = activeSource === 'all' || r.source === activeSource
     const matchSearch = !q || r.title.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)
-    return matchCat && matchSearch
+    return matchCat && matchSource && matchSearch
   })
+
+  // ServiceNow runbooks are read only articles: an old ?open= link goes to the article page instead.
+  if (openRunbook?.source === 'servicenow' && openRunbook.kb_article_id) {
+    return <Navigate to={`/knowledge/${openRunbook.kb_article_id}`} replace />
+  }
 
   return (
     <div className={page.page}>
       <header className={page.header}>
         <h1 className={page.title}>Runbook library</h1>
         <p className={page.lead}>
-          Approved operational runbooks for L2 support engineers on the Fingen platform. Always use the latest approved
-          version.
+          Approved operational runbooks for L2 support engineers on the Fingen platform, including runbooks and SOPs
+          synced from ServiceNow. Always use the latest approved version.
         </p>
       </header>
 
@@ -160,7 +180,7 @@ export default function RunbookLibrary() {
           onChange={(e) => setSearch(e.target.value)}
         />
         <div className={styles.chips} role="group" aria-label="Category">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               type="button"
@@ -169,6 +189,19 @@ export default function RunbookLibrary() {
               onClick={() => setActiveCategory(cat)}
             >
               {cat}
+            </button>
+          ))}
+        </div>
+        <div className={styles.chips} role="group" aria-label="Source">
+          {SOURCES.map((src) => (
+            <button
+              key={src.value}
+              type="button"
+              className={styles.chip}
+              aria-pressed={activeSource === src.value}
+              onClick={() => setActiveSource(src.value)}
+            >
+              {src.label}
             </button>
           ))}
         </div>
@@ -208,6 +241,7 @@ export default function RunbookLibrary() {
                   onClick={() => {
                     setSearch('')
                     setActiveCategory('All')
+                    setActiveSource('all')
                   }}
                 >
                   Clear filters
@@ -226,15 +260,31 @@ export default function RunbookLibrary() {
                   </div>
                   <h2 className={styles.cardTitle}>{rb.title}</h2>
                   <p className={styles.cardDesc}>{rb.description}</p>
+                  <div className={styles.cardTags}>
+                    <SourceTag source={rb.source} />
+                    <ClassificationBadge level={rb.classification} />
+                  </div>
                   <div className={styles.cardFoot}>
-                    <span className={styles.version}>Updated {rb.updated}</span>
-                    <button
-                      type="button"
-                      className={`${page.btn} ${page.btnPrimary} ${page.btnSm}`}
-                      onClick={() => setOpen(rb.id)}
-                    >
-                      View <span className={page.srOnly}>{rb.title}</span> <ArrowRight size={14} aria-hidden="true" />
-                    </button>
+                    <span className={styles.version}>
+                      Updated {rb.source === 'servicenow' ? formatDate(rb.updated) : rb.updated}
+                    </span>
+                    {rb.source === 'servicenow' && rb.kb_article_id ? (
+                      <Link
+                        to={`/knowledge/${rb.kb_article_id}`}
+                        className={`${page.btn} ${page.btnPrimary} ${page.btnSm}`}
+                      >
+                        Open article <span className={page.srOnly}>{rb.title}</span>{' '}
+                        <ArrowRight size={14} aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${page.btn} ${page.btnPrimary} ${page.btnSm}`}
+                        onClick={() => setOpen(rb.id)}
+                      >
+                        View <span className={page.srOnly}>{rb.title}</span> <ArrowRight size={14} aria-hidden="true" />
+                      </button>
+                    )}
                   </div>
                 </article>
               ))}

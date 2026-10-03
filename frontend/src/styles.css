@@ -1044,6 +1044,12 @@ select:focus {
 .md a {
   color: var(--color-accent);
 }
+/* Article images are synced attachments served by the API; keep them inside the column. */
+.md img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+}
 .md-lesson {
   font-size: 0.9rem;
 }
