@@ -6,7 +6,7 @@ import Constellation from './Constellation'
 import styles from './LoginScene.module.css'
 
 /**
- * Background of the sign in brand panel: a slowly drifting navy to violet mesh, the operator photo
+ * Background of the sign in brand panel: a slowly drifting navy to violet mesh, the server room photo
  * under a contrast overlay, and the curriculum constellation. Decorative and hidden from assistive
  * technology. Every loop pauses while the tab is hidden; parallax runs only on wide screens with a
  * fine pointer and motion allowed, writing two custom properties at most once per frame.

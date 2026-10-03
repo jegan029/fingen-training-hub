@@ -284,7 +284,7 @@ Thesis: done should feel like a clean shift handover; the work is acknowledged a
 - Verified: 94 Vitest, Playwright 5 (learner flow opens the next topic from the handover), 256 pytest, visual round at 1440 and 390, light and dark, reduced motion; sweep timing checked with `getAnimations()` (510 to 990 ms delays, done before the 1600 ms moment clears)
 
 ## Login redesign (`feature/login-redesign`, stacked on `feature/motion`)
-Decisions: stack on `feature/motion`; `Retry-After` on 429 for a real countdown; no "Keep me signed in" (one fixed 8 hour session); photo A, an operator in blue light (Pexels 39071423).
+Decisions: stack on `feature/motion`; `Retry-After` on 429 for a real countdown; no "Keep me signed in" (one fixed 8 hour session); photo A, an operator in blue light (Pexels 39071423), later replaced at the user's request by a blue server room aisle (Pexels 17323801, cropped to leave out the large rack label behind the copy).
 - [x] `GET /api/public/stats` (three counts, dataset runbooks only, cached 10 minutes, 30 a minute) and `Retry-After` on every 429; `ApiError.retryAfter`
 - [x] Split screen at 1024 px and wider (58/42, no scroll), tablet band with the card overlapping, phone card alone with the logo
 - [x] Brand panel: tagline, value list, counting stats (hidden on failure, space reserved while loading), rotating tips with pause (next tip under reduced motion), footer line

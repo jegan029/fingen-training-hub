@@ -4,7 +4,7 @@ An onboarding platform for L2 support engineers on the (fictional) Fingen platfo
 
 Built with FastAPI and SQLite on the backend and React 18, TypeScript and Vite on the frontend. This is a demo: all people, accounts and procedures are made up.
 
-![The sign in page: a brand panel with the curriculum drawn as a constellation over a monitoring room photo, and the sign in form](docs/screenshots/login.webp)
+![The sign in page: a brand panel with the curriculum drawn as a constellation over a server room photo, and the sign in form](docs/screenshots/login.webp)
 
 ## Features
 

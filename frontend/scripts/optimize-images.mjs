@@ -13,14 +13,15 @@ const MAX_BYTES = 200 * 1024
 // Crop boxes are in source pixels (sources are 2400px wide). Omitted = centred 16:9.
 // `aspect` (width / height, default 16:9) and `widths` override the card defaults for other placements.
 const PHOTOS = [
-  // Sign in panel: portrait 4:5 at 1x and 2x of the ~900 CSS px panel; the operator sits low right, the dark top carries the text.
+  // Sign in panel: portrait 4:5 at 1x and 2x of the ~900 CSS px panel. The source is a 4000 x 2670 landscape;
+  // the crop takes the aisle receding to the right and leaves out the large rack label, which would sit behind the copy.
   {
     name: 'signin',
     file: 'signin.jpg',
     aspect: 4 / 5,
     widths: [900, 1800],
     maxBytes: 320 * 1024,
-    crop: { left: 0, top: 598, width: 2400, height: 3000 },
+    crop: { left: 1864, top: 0, width: 2136, height: 2670 },
   },
   // Keeps the engineer and her reflection; excludes vendor logos on the left-hand racks.
   { name: 'platform', file: 'platform.jpg', crop: { left: 700, top: 180, width: 1700, height: 956 } },

@@ -46,9 +46,9 @@ export const IMAGE_CREDITS: ImageCredit[] = [
   },
   {
     usedFor: 'Sign in page',
-    author: 'Caleb Oquendo',
+    author: 'Cookiecutter',
     source: 'Pexels',
-    sourceUrl: 'https://www.pexels.com/photo/woman-in-control-room-monitoring-screens-39071423/',
+    sourceUrl: 'https://www.pexels.com/photo/network-rack-17323801/',
     licence: 'Pexels License',
     licenceUrl: PEXELS,
   },

@@ -91,7 +91,7 @@
   }
 }
 
-/* Keeps text at 4.5:1 or better: darkest where the copy sits (left and bottom), lighter over the operator. */
+/* Keeps text at 4.5:1 or better: darkest where the copy sits (left and bottom), lighter over the server aisle. */
 .overlay {
   position: absolute;
   inset: 0;
