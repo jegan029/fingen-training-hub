@@ -7,6 +7,7 @@ import RoadmapCanvas from '../components/roadmap/RoadmapCanvas'
 import RoadmapList from '../components/roadmap/RoadmapList'
 import NodeDrawer from '../components/roadmap/NodeDrawer'
 import Legend from '../components/roadmap/Legend'
+import { describeChange, type StatusChange } from '../components/roadmap/statusChange'
 import { meterStyle } from '../lib/motion'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import styles from './ModuleView.module.css'
@@ -20,6 +21,9 @@ export default function ModuleView() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [statusError, setStatusError] = useState<string | null>(null)
+  // The last status change: drives the completion moment and the live region announcement.
+  const [change, setChange] = useState<StatusChange | null>(null)
+  const [announcement, setAnnouncement] = useState('')
   const opener = useRef<HTMLElement | null>(null)
   const narrow = useMediaQuery('(max-width: 767px)')
 
@@ -28,6 +32,13 @@ export default function ModuleView() {
   const selected = nodes?.find((n) => n.id === selectedId) ?? null
 
   const loadNodes = useCallback(() => fetchRoadmapNodes(pathId).then(setNodes), [pathId])
+
+  // The moment plays once; clearing it lets the same topic celebrate again after a reset.
+  useEffect(() => {
+    if (!change) return
+    const timer = window.setTimeout(() => setChange(null), 1600)
+    return () => window.clearTimeout(timer)
+  }, [change])
 
   // No state reset needed when pathId changes: App remounts each page on a new pathname.
   useEffect(() => {
@@ -40,6 +51,7 @@ export default function ModuleView() {
   const open = (nodeId: number, from: HTMLElement) => {
     opener.current = from
     setStatusError(null)
+    setAnnouncement('')
     setSearchParams({ node: String(nodeId) })
   }
 
@@ -50,12 +62,17 @@ export default function ModuleView() {
   }
 
   const changeStatus = async (status: NodeStatus) => {
-    if (!selected || status === selected.status) return
+    if (!selected || !nodes || status === selected.status) return
+    const before = nodes
     setBusy(true)
     setStatusError(null)
     try {
       await setNodeStatus(selected.id, status)
-      await loadNodes() // dependents may have unlocked
+      const after = await fetchRoadmapNodes(pathId) // dependents may have unlocked
+      setNodes(after)
+      const next = describeChange(before, after, selected.id)
+      setChange(next)
+      if (next) setAnnouncement(next.message)
     } catch (err) {
       setStatusError(err instanceof ApiError ? err.message : 'Could not update the status')
     } finally {
@@ -137,9 +154,15 @@ export default function ModuleView() {
             <Legend />
           </div>
           {narrow ? (
-            <RoadmapList nodes={nodes} onOpen={open} />
+            <RoadmapList nodes={nodes} onOpen={open} change={change} />
           ) : (
-            <RoadmapCanvas nodes={nodes} pathTitle={path?.title ?? 'Path'} selectedId={selectedId} onOpen={open} />
+            <RoadmapCanvas
+              nodes={nodes}
+              pathTitle={path?.title ?? 'Path'}
+              selectedId={selectedId}
+              onOpen={open}
+              change={change}
+            />
           )}
         </div>
       )}
@@ -152,6 +175,7 @@ export default function ModuleView() {
           error={statusError}
           onStatus={changeStatus}
           onClose={close}
+          announcement={announcement}
         />
       )}
     </div>

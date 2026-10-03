@@ -221,8 +221,11 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - [x] Empty and error states rise in once
 
 ### Phase B: Roadmap
-- [ ] Connectors draw in (transform only curtain), nodes arrive in step; distinct locked, available, in progress, done treatment
-- [ ] Completion moment: connector to the next topic lights up, newly unlocked topics change, live region announcement; list view too
+- [x] Connectors draw in through an SVG mask whose sheet slides down (transform only, dashed lines intact); sections, topics and subtopics arrive at their share of the draw
+- [x] Spine below every done topic is lit in the done colour (persistent state, not only an effect)
+- [x] Completion moment: the lit connector draws to the next topic, a ring spreads from the topic just done, then from each topic it unlocked, whose icon pops in; same moment in the mobile list
+- [x] `statusChange.describeChange` (pure, tested) feeds a polite status region inside the drawer: "Kafka Basics marked done. Settlement Flow unlocked."
+- Kept as is: the four state treatments were already distinct (icon, text, border style, fill), so no new looping effect was added for in progress
 
 ### Phase C: Path list
 - [ ] Staggered cards, progress ring counting up, hover and focus depth, ambient lattice showing overall progress

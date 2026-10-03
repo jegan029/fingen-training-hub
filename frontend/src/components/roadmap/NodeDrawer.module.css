@@ -258,3 +258,12 @@
   font-size: var(--text-xs);
   line-height: 2;
 }
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

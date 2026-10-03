@@ -13,11 +13,21 @@ interface NodeDrawerProps {
   error: string | null
   onStatus: (status: NodeStatus) => void
   onClose: () => void
+  /** Result of the last status change ("X marked done. Y unlocked."), read out politely. */
+  announcement?: string
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])'
 
-export default function NodeDrawer({ node, pathId, busy, error, onStatus, onClose }: NodeDrawerProps) {
+export default function NodeDrawer({
+  node,
+  pathId,
+  busy,
+  error,
+  onStatus,
+  onClose,
+  announcement = '',
+}: NodeDrawerProps) {
   const panel = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
 
@@ -106,6 +116,10 @@ export default function NodeDrawer({ node, pathId, busy, error, onStatus, onClos
               )
             })}
           </div>
+          {/* Inside the dialog, so screen readers that ignore content outside a modal still hear it. */}
+          <p className={styles.srOnly} role="status">
+            {announcement}
+          </p>
           {error && (
             <p className={styles.error} role="alert">
               {error}

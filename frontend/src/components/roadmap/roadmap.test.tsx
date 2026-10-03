@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { NodeSummary } from '../../types'
 import NodeDrawer from './NodeDrawer'
 import RoadmapCanvas from './RoadmapCanvas'
+import { describeChange } from './statusChange'
 
 function node(overrides: Partial<NodeSummary> = {}): NodeSummary {
   return {
@@ -129,5 +130,61 @@ describe('RoadmapCanvas', () => {
   it('announces status in the accessible name', () => {
     renderCanvas()
     expect(screen.getByRole('button', { name: '1. Platform Architecture, Pending' })).toBeInTheDocument()
+  })
+})
+
+describe('completion moment', () => {
+  const before = [
+    node({ id: 1, title: 'Kafka Basics', subtopics: [] }),
+    node({
+      id: 2,
+      title: 'Settlement Flow',
+      dependencies: [1],
+      locked: true,
+      locked_by: ['Kafka Basics'],
+      subtopics: [],
+    }),
+    node({ id: 3, title: 'Reconciliation', subtopics: [] }),
+  ]
+  const after = [
+    { ...before[0], status: 'done' as const, completed: true },
+    { ...before[1], locked: false, locked_by: [] },
+    before[2],
+  ]
+
+  it('describes what a status change did, for the announcement', () => {
+    expect(describeChange(before, after, 1)).toEqual({
+      nodeId: 1,
+      status: 'done',
+      nextId: 2,
+      unlockedIds: [2],
+      message: 'Kafka Basics marked done. Settlement Flow unlocked.',
+    })
+  })
+
+  it('reports nothing when the status did not change', () => {
+    expect(describeChange(before, before, 1)).toBeNull()
+  })
+
+  it('says reset rather than pending', () => {
+    expect(describeChange(after, before, 1)?.message).toBe('Kafka Basics reset.')
+  })
+
+  it('lights the connector to the next topic and rings the unlocked one', () => {
+    const change = describeChange(before, after, 1)
+    const { container } = render(
+      <RoadmapCanvas nodes={after} pathTitle="Core" selectedId={null} onOpen={vi.fn()} change={change} />,
+    )
+    expect(screen.getByRole('button', { name: /kafka basics, done/i })).toHaveAttribute('data-celebrate', 'done')
+    expect(screen.getByRole('button', { name: /settlement flow, pending/i })).toHaveAttribute(
+      'data-celebrate',
+      'unlocked',
+    )
+    expect(container.querySelectorAll('rect[data-draw]')).toHaveLength(1)
+  })
+
+  it('reads the change out inside the drawer', () => {
+    renderDrawer(after[0], { announcement: 'Kafka Basics marked done. Settlement Flow unlocked.' })
+    expect(screen.getByText('Kafka Basics marked done. Settlement Flow unlocked.')).toHaveAttribute('role', 'status')
   })
 })

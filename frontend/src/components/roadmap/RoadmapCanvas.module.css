@@ -53,8 +53,39 @@
   opacity: 0.85;
 }
 
+/* Draw in: the mask's sheet slides down over --motion-draw; elements arrive at their share of it (--at). */
+.curtain {
+  transform-box: fill-box;
+  animation: curtain var(--motion-draw) var(--ease-in-out) backwards;
+}
+
+@keyframes curtain {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
+/* Spine below a done topic. */
+.lit {
+  fill: var(--rm-done-border);
+}
+
+.lit[data-draw] {
+  transform-box: fill-box;
+  transform-origin: top;
+  animation: litDraw var(--motion-slow) var(--ease-out) backwards;
+}
+
+@keyframes litDraw {
+  from {
+    transform: scaleY(0);
+  }
+}
+
 /* ── Section labels on the spine ────────────── */
 .section {
+  composes: fadeIn from '../../styles/motion.module.css';
+  --delay: calc(var(--at, 0) * var(--motion-draw));
   position: absolute;
   transform: translate(-50%, -50%);
   padding: 2px var(--space-3);
@@ -70,6 +101,8 @@
 
 /* ── Main topics ────────────────────────────── */
 .main {
+  composes: rise from '../../styles/motion.module.css';
+  --delay: calc(var(--at, 0) * var(--motion-draw));
   position: absolute;
   display: flex;
   align-items: center;
@@ -99,6 +132,50 @@
 .icon {
   display: inline-flex;
   flex-shrink: 0;
+}
+
+/* Completion moment: a ring spreads once from the topic just done, then from each topic it unlocked. */
+.main::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--color-success);
+  border-radius: calc(var(--radius-md) + 5px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.main[data-celebrate]::after {
+  animation: ring var(--motion-draw) var(--ease-out);
+}
+
+.main[data-celebrate='unlocked']::after {
+  border-color: var(--color-accent);
+  /* Waits for the lit connector to reach it. */
+  animation-delay: var(--motion-slow);
+}
+
+.icon[data-celebrate='unlocked'] {
+  --delay: var(--motion-slow);
+}
+
+@keyframes ring {
+  from {
+    opacity: 1;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .curtain,
+  .lit[data-draw],
+  .main[data-celebrate]::after {
+    animation: none;
+  }
 }
 
 .mainTitle {
@@ -143,6 +220,8 @@
 
 /* ── Subtopics ──────────────────────────────── */
 .sub {
+  composes: fadeIn from '../../styles/motion.module.css';
+  --delay: calc(var(--at, 0) * var(--motion-draw) + var(--motion-fast));
   position: absolute;
   display: flex;
   align-items: center;

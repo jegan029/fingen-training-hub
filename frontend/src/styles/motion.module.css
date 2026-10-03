@@ -1,24 +1,25 @@
 /*
  * Shared motion. Use a class directly, or compose it into a module class:
  *   .card { composes: rise from '../styles/motion.module.css'; }
- * Set --i on an element (see staggerStyle in lib/motion.ts) to delay it by --i steps of --stagger-step.
- * Every animation ends in the normal, visible state, and reduced motion shows that state straight away.
+ * Set --i on an element (see staggerStyle in lib/motion.ts) to delay it by --i steps of --stagger-step,
+ * or --delay for an exact delay. Animations fill backwards only: once finished they let go of transform,
+ * so hover and transitions keep working. Reduced motion shows the final state straight away.
  */
 
 .fadeIn {
-  animation: fadeIn var(--motion-base) var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+  animation: fadeIn var(--motion-base) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
 .rise {
-  animation: rise var(--motion-slow) var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+  animation: rise var(--motion-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
 /* Something arrived or finished: a check, a score, a badge. */
 .pop {
-  animation: pop var(--motion-slow) var(--ease-emphasis) both;
-  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+  animation: pop var(--motion-slow) var(--ease-emphasis) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
 /* Loading placeholder: a sheen sweeps across with transform only, no repaint of the block itself. */
@@ -51,7 +52,7 @@
   width: 100%;
   transform: translateX(calc((var(--p, 0) - 1) * 100%));
   transition: transform var(--motion-slow) var(--ease-out);
-  animation: meterIn var(--motion-draw) var(--ease-out) both;
+  animation: meterIn var(--motion-draw) var(--ease-out) backwards;
 }
 
 @keyframes meterIn {
