@@ -5,7 +5,7 @@ import { ApiError, fetchRoadmapNodes, fetchRoadmaps, setNodeStatus } from '../ap
 import type { LearningPath, NodeStatus, NodeSummary } from '../types'
 import RoadmapCanvas from '../components/roadmap/RoadmapCanvas'
 import RoadmapList from '../components/roadmap/RoadmapList'
-import NodeDrawer from '../components/roadmap/NodeDrawer'
+import NodeDrawer, { type Handover } from '../components/roadmap/NodeDrawer'
 import Legend from '../components/roadmap/Legend'
 import UnlockCue from '../components/roadmap/UnlockCue'
 import { describeChange, type StatusChange } from '../components/roadmap/statusChange'
@@ -27,6 +27,8 @@ export default function ModuleView() {
   const [announcement, setAnnouncement] = useState('')
   // Topics the last change unlocked; the cue offers to show them if they are out of view.
   const [pendingUnlock, setPendingUnlock] = useState<{ id: number; title: string }[]>([])
+  // What to do next after a topic is marked done; stays until another topic opens or the status changes.
+  const [handover, setHandover] = useState<(Handover & { nodeId: number }) | null>(null)
   const opener = useRef<HTMLElement | null>(null)
   const narrow = useMediaQuery('(max-width: 767px)')
 
@@ -55,7 +57,15 @@ export default function ModuleView() {
     opener.current = from
     setStatusError(null)
     setAnnouncement('')
+    setHandover(null)
     setSearchParams({ node: String(nodeId) })
+  }
+
+  // Open the topic the handover offers. Closing it later returns focus to that topic on the roadmap.
+  const openNext = (nodeId: number) => {
+    setPendingUnlock([])
+    const target = document.querySelector<HTMLElement>(`[data-node-id="${nodeId}"]`)
+    open(nodeId, target ?? opener.current ?? document.body)
   }
 
   const close = () => {
@@ -77,6 +87,7 @@ export default function ModuleView() {
       setChange(next)
       if (next) setAnnouncement(next.message)
       setPendingUnlock(after.filter((n) => next?.unlockedIds.includes(n.id)).map((n) => ({ id: n.id, title: n.title })))
+      setHandover(next?.status === 'done' ? toHandover(next, after, path?.title ?? 'this path') : null)
     } catch (err) {
       setStatusError(err instanceof ApiError ? err.message : 'Could not update the status')
     } finally {
@@ -101,7 +112,16 @@ export default function ModuleView() {
   const clearUnlock = useCallback(() => setPendingUnlock([]), [])
   // After the cue brings a topic into view, ring it again so the eye lands on it.
   const ringTopic = useCallback(
-    (nodeId: number) => setChange({ nodeId: -1, status: 'pending', nextId: null, unlockedIds: [nodeId], message: '' }),
+    (nodeId: number) =>
+      setChange({
+        nodeId: -1,
+        status: 'pending',
+        nextId: null,
+        unlockedIds: [nodeId],
+        nextUp: null,
+        pathComplete: false,
+        message: '',
+      }),
     [],
   )
 
@@ -152,6 +172,12 @@ export default function ModuleView() {
               Skipped {counts.skipped}
             </li>
           </ul>
+          {total > 0 && counts.done === total && (
+            <p className={landing ? `${styles.complete} ${motion.rise}` : styles.complete}>
+              <CheckCircle2 size={16} aria-hidden="true" />
+              Path complete. <Link to="/certificate">Check your certificate</Link>
+            </p>
+          )}
         </div>
       </header>
 
@@ -207,8 +233,23 @@ export default function ModuleView() {
           onClose={close}
           announcement={announcement}
           celebrating={change?.status === 'done'}
+          handover={handover?.nodeId === selected.id ? handover : null}
+          onOpenNext={openNext}
         />
       )}
     </div>
   )
+}
+
+/** The drawer's handover line for a topic just marked done. */
+function toHandover(change: StatusChange, nodes: NodeSummary[], pathTitle: string): Handover & { nodeId: number } {
+  const nextId = change.nextUp?.id
+  return {
+    nodeId: change.nodeId,
+    nextUp: change.nextUp,
+    nextUnlocked: nextId !== undefined && change.unlockedIds.includes(nextId),
+    alsoUnlocked: nodes.filter((n) => n.id !== nextId && change.unlockedIds.includes(n.id)).map((n) => n.title),
+    pathComplete: change.pathComplete,
+    pathTitle,
+  }
 }

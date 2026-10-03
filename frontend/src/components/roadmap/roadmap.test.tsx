@@ -158,7 +158,41 @@ describe('completion moment', () => {
       status: 'done',
       nextId: 2,
       unlockedIds: [2],
-      message: 'Kafka Basics marked done. Settlement Flow unlocked.',
+      nextUp: { id: 2, title: 'Settlement Flow' },
+      pathComplete: false,
+      message: 'Kafka Basics marked done. Settlement Flow unlocked. Next up: Settlement Flow.',
+    })
+  })
+
+  it('offers the next open topic, skipping locked, done and skipped ones and wrapping to the top', () => {
+    const path = [
+      node({ id: 1, title: 'One', subtopics: [] }),
+      node({ id: 2, title: 'Two', status: 'skipped', subtopics: [] }),
+      node({ id: 3, title: 'Three', subtopics: [] }),
+      node({ id: 4, title: 'Four', locked: true, locked_by: ['Three'], subtopics: [] }),
+    ]
+    const doneThree = path.map((n) => (n.id === 3 ? { ...n, status: 'done' as const } : n))
+    expect(describeChange(path, doneThree, 3)?.nextUp).toEqual({ id: 1, title: 'One' })
+    const doneOne = path.map((n) => (n.id === 1 ? { ...n, status: 'done' as const } : n))
+    expect(describeChange(path, doneOne, 1)?.nextUp).toEqual({ id: 3, title: 'Three' })
+  })
+
+  it('offers nothing when no open topic is left, and only done everywhere completes the path', () => {
+    const path = [
+      node({ id: 1, title: 'One', status: 'skipped', subtopics: [] }),
+      node({ id: 2, title: 'Two', subtopics: [] }),
+    ]
+    const change = describeChange(path, [path[0], { ...path[1], status: 'done' }], 2)
+    expect(change).toMatchObject({ nextUp: null, pathComplete: false, message: 'Two marked done.' })
+
+    const all = [
+      { ...path[0], status: 'done' as const },
+      { ...path[1], status: 'done' as const },
+    ]
+    expect(describeChange([all[0], path[1]], all, 2)).toMatchObject({
+      nextUp: null,
+      pathComplete: true,
+      message: 'Two marked done. That completes the path.',
     })
   })
 
@@ -181,6 +215,60 @@ describe('completion moment', () => {
       'unlocked',
     )
     expect(container.querySelectorAll('rect[data-draw]')).toHaveLength(1)
+  })
+
+  it('shows the handover and opens the next topic by button or the N key', () => {
+    const onOpenNext = vi.fn()
+    const { dialog } = renderDrawer(after[0], {
+      handover: {
+        nextUp: { id: 2, title: 'Settlement Flow' },
+        nextUnlocked: true,
+        alsoUnlocked: [],
+        pathComplete: false,
+        pathTitle: 'Core',
+      },
+      onOpenNext,
+    })
+    expect(dialog).toHaveTextContent('Done. Next up: Settlement Flow, now unlocked')
+    fireEvent.click(screen.getByRole('button', { name: /open next topic/i }))
+    fireEvent.keyDown(dialog, { key: 'n', ctrlKey: true })
+    fireEvent.keyDown(dialog, { key: 'n' })
+    expect(onOpenNext).toHaveBeenCalledTimes(2)
+    expect(onOpenNext).toHaveBeenCalledWith(2)
+  })
+
+  it('counts other unlocked topics instead of listing them all', () => {
+    const { dialog } = renderDrawer(after[0], {
+      handover: {
+        nextUp: { id: 2, title: 'Settlement Flow' },
+        nextUnlocked: true,
+        alsoUnlocked: ['Reconciliation', 'Ledger'],
+        pathComplete: false,
+        pathTitle: 'Core',
+      },
+      onOpenNext: vi.fn(),
+    })
+    expect(dialog).toHaveTextContent('Done. 2 more topics unlocked. Next up: Settlement Flow, now unlocked')
+  })
+
+  it('ignores N when there is no next topic', () => {
+    const onOpenNext = vi.fn()
+    const { dialog } = renderDrawer(after[0], {
+      handover: { nextUp: null, nextUnlocked: false, alsoUnlocked: [], pathComplete: false, pathTitle: 'Core' },
+      onOpenNext,
+    })
+    expect(screen.queryByRole('button', { name: /open next topic/i })).not.toBeInTheDocument()
+    fireEvent.keyDown(dialog, { key: 'n' })
+    expect(onOpenNext).not.toHaveBeenCalled()
+  })
+
+  it('marks the end of a path with a way to the certificate', () => {
+    const { dialog } = renderDrawer(after[0], {
+      handover: { nextUp: null, nextUnlocked: false, alsoUnlocked: [], pathComplete: true, pathTitle: 'Core' },
+      onOpenNext: vi.fn(),
+    })
+    expect(dialog).toHaveTextContent('That completes Core.')
+    expect(screen.getByRole('link', { name: 'Check your certificate' })).toHaveAttribute('href', '/certificate')
   })
 
   it('reads the change out inside the drawer', () => {

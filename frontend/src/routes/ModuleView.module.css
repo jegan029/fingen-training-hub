@@ -86,6 +86,27 @@
   font: 600 var(--text-xs) / 1.6 var(--font-sans);
 }
 
+/* A lasting state, not a moment: shown on every visit once each topic is done. */
+.complete {
+  --delay: var(--motion-slow);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  color: var(--color-text);
+  font: 600 var(--text-sm) / 1.4 var(--font-sans);
+}
+
+.complete svg {
+  color: var(--color-success);
+}
+
+.complete a {
+  color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+
 .body {
   position: relative;
   max-width: 1240px;

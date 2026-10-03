@@ -168,7 +168,7 @@ Routers (thin HTTP, mounted under `/api/<name>` in `main.py`) → services (logi
     - These are View Transitions, instant where unsupported or under reduced motion.
     - The `waitFor` option waits with timers, because frames are paused during the update.
   - **Shared title**: `sharedTitle(nodeId)` morphs the drawer title into the lesson heading.
-  - **Roadmap**: connectors draw in through an SVG mask, and the completion moment is driven by `roadmap/statusChange.ts`.
+  - **Roadmap**: connectors draw in through an SVG mask, and the completion moment is driven by `roadmap/statusChange.ts` (`describeChange` also picks `nextUp` for the drawer's handover line and the N key, and `pathComplete` for the sweep and the certificate links).
   - **Rules**:
     - Animate only transform and opacity. Progress ring and analytics arcs (`stroke-dashoffset`) are the paint only exception.
     - Every animation must be static under `prefers-reduced-motion`.

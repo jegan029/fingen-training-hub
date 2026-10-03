@@ -2,7 +2,7 @@ import { act, fireEvent, render, renderHook, screen } from '@testing-library/rea
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useCountUp } from '../../lib/motion'
 import UnlockCue from './UnlockCue'
-import { celebration, type StatusChange } from './statusChange'
+import { celebration, sweepStep, type StatusChange } from './statusChange'
 
 type Callback = (entries: Partial<IntersectionObserverEntry>[]) => void
 let observe: Callback = () => {}
@@ -37,7 +37,15 @@ afterEach(() => {
 })
 
 describe('celebration', () => {
-  const change: StatusChange = { nodeId: 1, status: 'in_progress', nextId: 2, unlockedIds: [], message: '' }
+  const change: StatusChange = {
+    nodeId: 1,
+    status: 'in_progress',
+    nextId: 2,
+    unlockedIds: [],
+    nextUp: null,
+    pathComplete: false,
+    message: '',
+  }
 
   it('acknowledges any status change on the changed topic, and only done rings', () => {
     expect(celebration(change, 1)).toBe('changed')
@@ -45,6 +53,18 @@ describe('celebration', () => {
     expect(celebration({ ...change, status: 'skipped', unlockedIds: [3] }, 3)).toBe('unlocked')
     expect(celebration(change, 2)).toBeUndefined()
     expect(celebration(null, 1)).toBeUndefined()
+  })
+
+  it('sweeps every other topic when the path is complete', () => {
+    const complete = { ...change, status: 'done' as const, pathComplete: true }
+    expect(celebration(complete, 1)).toBe('done')
+    expect(celebration(complete, 2)).toBe('sweep')
+  })
+
+  it('spreads the sweep outward from the topic just completed', () => {
+    const nodes = [{ id: 1 }, { id: 2 }, { id: 3 }, { id: 4 }]
+    const done = { ...change, nodeId: 3, status: 'done' as const, pathComplete: true }
+    expect(nodes.map((_, i) => sweepStep(nodes, done, i))).toEqual([2, 1, 0, 1])
   })
 })
 

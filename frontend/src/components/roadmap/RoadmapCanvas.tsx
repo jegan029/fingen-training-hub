@@ -2,9 +2,9 @@ import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from 
 import type { NodeSummary } from '../../types'
 import { layoutRoadmap } from './layout'
 import { StatusIcon, statusText } from './status'
-import { celebration, type StatusChange } from './statusChange'
+import { celebrateClass, celebration, sweepStep, type StatusChange } from './statusChange'
 import styles from './RoadmapCanvas.module.css'
-import { motion } from '../../lib/motion'
+import { motion, staggerStyle } from '../../lib/motion'
 
 interface RoadmapCanvasProps {
   nodes: NodeSummary[]
@@ -188,8 +188,9 @@ export default function RoadmapCanvas({ nodes, pathTitle, selectedId, onOpen, ch
               {/* Keyed by status so the new icon pops in when the state changes. */}
               <span
                 key={`${node.status}-${node.locked}`}
-                className={`${styles.icon} ${celebrate ? `${motion.pop} ${motion.keep}` : ''}`}
+                className={`${styles.icon} ${celebrateClass(celebrate)}`}
                 data-celebrate={celebrate}
+                style={celebrate === 'sweep' ? staggerStyle(sweepStep(nodes, change, box.index)) : undefined}
               >
                 <StatusIcon status={node.status} locked={node.locked} size={18} />
               </span>

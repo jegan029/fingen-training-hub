@@ -273,3 +273,12 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - Changed from the plan: the cue appears once the drawer closes (under the open drawer it would sit beneath the scrim), and Escape does not dismiss it, because Escape closes the drawer
 - Verified: 86 Vitest, Playwright 5 (learner flow now covers the cue, stable over repeated runs), visual round at 1440 and 390, light and dark, reduced motion
 
+
+### Node completion delight (`/impeccable delight node completion`)
+Thesis: done should feel like a clean shift handover; the work is acknowledged and the next piece is already in hand.
+- [x] Handover line in the drawer after a topic is marked done: "Done. Next up: X" (or "X, now unlocked"), with "Open next topic" and the N key; one other unlocked topic is named, several are counted. It lands with the header beat and stays until another topic opens or the status changes
+- [x] Next topic logic in `describeChange` (`nextUp`: the first open topic that is not locked, done or skipped, after this one, wrapping to the top); the live region adds "Next up: X."
+- [x] Path complete: every other topic icon pulses once, spreading out from the topic just done (`sweepStep`); the drawer says "That completes {path}." with links to the certificate and all paths; the header keeps a "Path complete." line with a certificate link on every visit
+- [x] Reduced motion: the sweep is an opacity pulse on the same timing; everything else is static
+- Changed from the plan: the sweep pulses icons in place (no fade out first) and spreads from the completed topic rather than top to bottom, because a path is finished at the bottom of the map where the learner is looking; several unlocked topics are counted in the visible line to keep it short
+- Verified: 94 Vitest, Playwright 5 (learner flow opens the next topic from the handover), 256 pytest, visual round at 1440 and 390, light and dark, reduced motion; sweep timing checked with `getAnimations()` (510 to 990 ms delays, done before the 1600 ms moment clears)

@@ -2,7 +2,7 @@ import type { NodeSummary } from '../../types'
 import { motion, staggerStyle } from '../../lib/motion'
 import { sectionFor } from './layout'
 import { StatusIcon, statusText } from './status'
-import { celebration, type StatusChange } from './statusChange'
+import { celebrateClass, celebration, sweepStep, type StatusChange } from './statusChange'
 import styles from './RoadmapList.module.css'
 
 interface RoadmapListProps {
@@ -34,8 +34,9 @@ export default function RoadmapList({ nodes, onOpen, change }: RoadmapListProps)
             >
               <span
                 key={`${node.status}-${node.locked}`}
-                className={`${styles.icon} ${celebrate ? `${motion.pop} ${motion.keep}` : ''}`}
+                className={`${styles.icon} ${celebrateClass(celebrate)}`}
                 data-celebrate={celebrate}
+                style={celebrate === 'sweep' ? staggerStyle(sweepStep(nodes, change, index)) : undefined}
               >
                 <StatusIcon status={node.status} locked={node.locked} size={18} />
               </span>

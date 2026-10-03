@@ -192,7 +192,24 @@
   }
 }
 
+/* Completing the path: each topic icon pulses once, spreading out from the topic just done. */
+.icon[data-celebrate='sweep'] {
+  animation: sweep var(--motion-base) var(--ease-out);
+  animation-delay: calc(var(--motion-slow) + var(--i, 0) * var(--stagger-step));
+}
+
+@keyframes sweep {
+  50% {
+    transform: scale(1.3);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .icon[data-celebrate='sweep'] {
+    animation-name: sweepFade;
+    animation-timing-function: linear;
+  }
+
   .curtain {
     animation: none;
   }
@@ -291,4 +308,10 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+@keyframes sweepFade {
+  50% {
+    opacity: 0.35;
+  }
 }

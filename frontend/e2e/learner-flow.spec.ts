@@ -28,6 +28,15 @@ test('learner signs in, opens a path, marks a topic done and sees progress updat
   await expect(progress).toHaveAttribute('aria-valuenow', '10')
   await expect(page.getByRole('list', { name: 'Status counts' })).toContainText('Done 1')
 
+  // The handover names the next topic and opens it in the same drawer.
+  const second = (await page.getByRole('button', { name: /^2\. / }).getAttribute('aria-label'))!
+  const secondTitle = second.replace(/^2\. /, '').replace(/, Pending$/, '')
+  await expect(drawer).toContainText(`Next up: ${secondTitle}, now unlocked`)
+  await drawer.getByRole('button', { name: /Open next topic/ }).click()
+  await expect(page).toHaveURL(/\?node=2$/)
+  await expect(drawer.getByRole('heading', { level: 2 })).toHaveText(secondTitle)
+  await expect(drawer.getByRole('button', { name: 'Close' })).toBeFocused()
+
   // The home page now suggests the next topic.
   await page.keyboard.press('Escape')
   await page.goto('/')
