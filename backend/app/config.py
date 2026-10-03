@@ -18,6 +18,9 @@ APP_ENV = os.getenv("APP_ENV", "production").strip().lower()
 IS_DEV = APP_ENV == "development"
 
 DB_PATH = Path(os.getenv("DB_PATH", str(DATA_DIR / "app.db")))
+# Synced ServiceNow documents, named by sha256. Next to the database (so in the same Docker volume),
+# never under a static or public folder; files are only served through an access checked endpoint.
+KB_DOCUMENTS_DIR = Path(os.getenv("KB_DOCUMENTS_DIR", str(DB_PATH.parent / "kb_documents")))
 
 # openai_compatible (OpenAI, NVIDIA, vLLM, Ollama...), anthropic, or offline (no network, deterministic).
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai_compatible").strip().lower()

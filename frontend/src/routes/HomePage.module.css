@@ -466,6 +466,7 @@
 }
 
 .fill {
+  composes: motion-meter from global;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--color-accent);

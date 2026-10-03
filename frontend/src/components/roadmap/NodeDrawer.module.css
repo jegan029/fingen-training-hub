@@ -4,6 +4,12 @@
   z-index: var(--z-drawer);
   background: rgba(8, 12, 30, 0.35);
   animation: fade var(--duration-base) var(--ease-out);
+  transition: opacity var(--motion-base) var(--ease-out);
+}
+
+/* Cleared while the roadmap plays a completion moment, then dimmed again. */
+.backdrop[data-clear] {
+  opacity: 0;
 }
 
 .drawer {
@@ -136,6 +142,76 @@
   box-shadow: inset 0 0 0 1px var(--color-accent);
 }
 
+/* Handover after a topic is marked done: lands with the roadmap's beat, names what comes next. */
+.handover {
+  --delay: var(--motion-slow);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+}
+
+.handoverText {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  flex: 1 1 14rem;
+  color: var(--color-text);
+  font: 400 var(--text-sm) / 1.45 var(--font-sans);
+  text-wrap: pretty;
+}
+
+.handoverText svg {
+  flex-shrink: 0;
+  margin-top: 0.15em;
+  color: var(--color-success);
+}
+
+.handoverText strong {
+  color: var(--color-heading);
+}
+
+.handoverButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+  font: 600 var(--text-sm) / 1.2 var(--font-sans);
+  cursor: pointer;
+}
+
+.handoverButton:hover {
+  background: var(--color-accent-hover);
+}
+
+.handoverButton .kbd {
+  border-color: currentColor;
+  background: transparent;
+  color: inherit;
+}
+
+.handoverLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font: 600 var(--text-sm) / 1.3 var(--font-sans);
+}
+
+.handoverLinks a {
+  color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+
 .kbd {
   display: inline-block;
   min-width: 1.4em;
@@ -257,4 +333,13 @@
   color: var(--color-text-muted);
   font-size: var(--text-xs);
   line-height: 2;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

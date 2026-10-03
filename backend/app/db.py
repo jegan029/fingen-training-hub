@@ -179,13 +179,131 @@ def _m005_runbooks_and_subtopics(conn: sqlite3.Connection) -> None:
     )
 
 
+_LEVEL_CHECK = "IN ('public', 'internal', 'confidential', 'restricted')"
+
+
+def _m006_servicenow_knowledge(conn: sqlite3.Connection) -> None:
+    """ServiceNow knowledge: articles, applications, documents, sync runs, node links, audit and clearance."""
+    conn.executescript(
+        f"""
+        CREATE TABLE IF NOT EXISTS applications (
+            id INTEGER PRIMARY KEY,
+            external_sys_id TEXT,
+            app_number TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            source TEXT NOT NULL DEFAULT 'servicenow' CHECK (source IN ('servicenow', 'local')),
+            active INTEGER NOT NULL DEFAULT 1,
+            updated_at TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS kb_articles (
+            id INTEGER PRIMARY KEY,
+            external_sys_id TEXT UNIQUE NOT NULL,
+            kb_number TEXT UNIQUE NOT NULL,
+            title TEXT NOT NULL,
+            summary TEXT NOT NULL DEFAULT '',
+            body_markdown TEXT NOT NULL DEFAULT '',
+            body_raw_html TEXT NOT NULL DEFAULT '',
+            classification TEXT NOT NULL DEFAULT 'restricted' CHECK (classification {_LEVEL_CHECK}),
+            source_classification TEXT,
+            article_type TEXT,
+            kind TEXT NOT NULL DEFAULT 'other' CHECK (kind IN ('runbook', 'sop', 'other')),
+            knowledge_base TEXT,
+            category TEXT,
+            version TEXT,
+            workflow_state TEXT,
+            valid_to TEXT,
+            source_updated_at TEXT,
+            synced_at TEXT,
+            content_hash TEXT,
+            active INTEGER NOT NULL DEFAULT 0,
+            source_url TEXT
+        );
+        CREATE INDEX IF NOT EXISTS ix_kb_articles_visible ON kb_articles(active, classification);
+        CREATE INDEX IF NOT EXISTS ix_kb_articles_updated ON kb_articles(source_updated_at);
+        CREATE TABLE IF NOT EXISTS article_applications (
+            article_id INTEGER NOT NULL REFERENCES kb_articles(id),
+            application_id INTEGER NOT NULL REFERENCES applications(id),
+            PRIMARY KEY (article_id, application_id)
+        );
+        CREATE TABLE IF NOT EXISTS article_documents (
+            id INTEGER PRIMARY KEY,
+            article_id INTEGER NOT NULL REFERENCES kb_articles(id),
+            external_sys_id TEXT,
+            file_name TEXT NOT NULL,
+            content_type TEXT,
+            size_bytes INTEGER,
+            sha256 TEXT,
+            storage_path TEXT,
+            kind TEXT NOT NULL CHECK (kind IN ('attachment', 'linked_article')),
+            linked_kb_number TEXT,
+            synced_at TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_article_documents_attachment
+            ON article_documents(article_id, external_sys_id);
+        CREATE TABLE IF NOT EXISTS sync_runs (
+            id INTEGER PRIMARY KEY,
+            started_at TEXT NOT NULL,
+            finished_at TEXT,
+            mode TEXT NOT NULL CHECK (mode IN ('incremental', 'full')),
+            trigger TEXT NOT NULL DEFAULT 'manual',
+            status TEXT NOT NULL CHECK (status IN ('running', 'success', 'partial', 'failed')),
+            articles_seen INTEGER NOT NULL DEFAULT 0,
+            articles_created INTEGER NOT NULL DEFAULT 0,
+            articles_updated INTEGER NOT NULL DEFAULT 0,
+            articles_unchanged INTEGER NOT NULL DEFAULT 0,
+            articles_retired INTEGER NOT NULL DEFAULT 0,
+            articles_failed INTEGER NOT NULL DEFAULT 0,
+            documents_downloaded INTEGER NOT NULL DEFAULT 0,
+            documents_rejected INTEGER NOT NULL DEFAULT 0,
+            watermark TEXT,
+            error_summary TEXT
+        );
+        CREATE TABLE IF NOT EXISTS article_nodes (
+            article_id INTEGER NOT NULL REFERENCES kb_articles(id),
+            node_id INTEGER NOT NULL REFERENCES nodes(id),
+            origin TEXT NOT NULL CHECK (origin IN ('mapping', 'manual')),
+            PRIMARY KEY (article_id, node_id, origin)
+        );
+        CREATE TABLE IF NOT EXISTS kb_access_log (
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            article_id INTEGER NOT NULL REFERENCES kb_articles(id),
+            document_id INTEGER REFERENCES article_documents(id),
+            action TEXT NOT NULL CHECK (action IN ('view', 'download')),
+            at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_kb_access_log_at ON kb_access_log(at);
+        """
+    )
+    # Existing runbooks are local content, classified internal; synced ones are projections of articles.
+    conn.execute(
+        "ALTER TABLE runbooks ADD COLUMN source TEXT NOT NULL DEFAULT 'local' CHECK (source IN ('local', 'servicenow'))"
+    )
+    conn.execute("ALTER TABLE runbooks ADD COLUMN kb_article_id INTEGER REFERENCES kb_articles(id)")
+    conn.execute(
+        f"ALTER TABLE runbooks ADD COLUMN classification TEXT NOT NULL DEFAULT 'internal' CHECK (classification {_LEVEL_CHECK})"
+    )
+    conn.execute(
+        f"ALTER TABLE users ADD COLUMN max_classification TEXT NOT NULL DEFAULT 'internal' "
+        f"CHECK (max_classification {_LEVEL_CHECK})"
+    )
+    # Admins can raise any clearance, their own included, so they start with full clearance.
+    conn.execute("UPDATE users SET max_classification = 'restricted' WHERE role = 'admin'")
+
+
 MIGRATIONS: list[Callable[[sqlite3.Connection], None]] = [
     _m001_login_failures,
     _m002_drop_legacy_password_hashes,
     _m003_fingen_email_domain,
     _m004_progress_status,
     _m005_runbooks_and_subtopics,
+    _m006_servicenow_knowledge,
 ]
+
+# ServiceNow runbooks live in the runbooks table with id = RUNBOOK_ID_OFFSET + kb_articles.id, so the
+# dataset's upsert by id can never overwrite one (dataset runbook ids must stay below this).
+RUNBOOK_ID_OFFSET = 100_000
 
 
 def _run_migrations(conn: sqlite3.Connection) -> None:
@@ -225,6 +343,8 @@ def _sync_dataset(conn: sqlite3.Connection) -> None:
         payload = json.load(f)
 
     for rb in payload.get("runbooks", []):
+        if rb["id"] >= RUNBOOK_ID_OFFSET:
+            raise ValueError(f"Dataset runbook ids must stay below {RUNBOOK_ID_OFFSET} (ServiceNow range)")
         conn.execute(
             """INSERT INTO runbooks (id, slug, title, category, version, updated, description,
                                      preconditions, steps, escalation_triggers)
@@ -396,8 +516,8 @@ def _seed_login_accounts(conn: sqlite3.Connection) -> None:
             conn.execute("UPDATE users SET password_hash = ?, role = ? WHERE email = ?", (pw_hash, role, email))
         else:
             conn.execute(
-                "INSERT INTO users (id, name, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
-                (uid, name, email, pw_hash, role),
+                "INSERT INTO users (id, name, email, password_hash, role, max_classification) VALUES (?, ?, ?, ?, ?, ?)",
+                (uid, name, email, pw_hash, role, "restricted" if role == "admin" else "internal"),
             )
         if configured:
             logger.warning("Set %s account %s password from %s.", role, email, env_name)

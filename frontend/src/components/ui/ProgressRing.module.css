@@ -1,0 +1,60 @@
+.ring {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.track,
+.arc {
+  fill: none;
+  stroke-width: 4;
+}
+
+.track {
+  stroke: var(--color-surface-2);
+}
+
+/* Paint only exception (shared with the analytics arcs): the arc's dash offset. It causes no layout. */
+.arc {
+  stroke: var(--color-accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--motion-draw) var(--ease-out);
+  animation: fill var(--motion-draw) var(--ease-out) backwards;
+}
+
+.ring[data-tone='success'] .arc {
+  stroke: var(--color-success);
+}
+
+/* A round cap on an empty arc would still draw a dot. */
+.ring[aria-valuenow='0'] .arc {
+  stroke: none;
+}
+
+@keyframes fill {
+  from {
+    stroke-dashoffset: 100;
+  }
+}
+
+.value {
+  font: 700 var(--text-xs) / 1 var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-heading);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arc {
+    transition: none;
+    animation: none;
+  }
+}

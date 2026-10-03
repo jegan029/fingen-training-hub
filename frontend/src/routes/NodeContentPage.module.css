@@ -55,6 +55,11 @@
   border-left: 4px solid var(--color-border);
 }
 
+/* Each section is its own markdown block, whose first heading loses its top margin; restore the gap. */
+.section + .section {
+  margin-top: 1.75rem;
+}
+
 .practice {
   margin-top: var(--space-7);
   padding: var(--space-5);

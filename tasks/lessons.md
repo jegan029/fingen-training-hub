@@ -12,4 +12,13 @@
 - Files written by Windows PowerShell 5 (`Set-Content -Encoding utf8`) start with a BOM, which breaks JSON parsers such as Lighthouse's `--extra-headers`; strip it or write from Node or Python.
 - A `display: block` utility class on a `<td>` breaks table layout; put such classes on an inner span.
 - Effects that call an imperative API with side effects on cleanup (for example `dialog.close()` firing `onClose`) misbehave under StrictMode's double mount; check what the cleanup triggers.
+- Logging filters must keep `record.args` in its original shape: uvicorn's access formatter unpacks the args tuple itself, so collapsing args into `msg` breaks every access log line. Unit tests with plain loggers miss this; start the real server and make a request.
+- `ruff format` can move a trailing `# gitleaks:allow` off the flagged line; put test secrets in their own short assignment.
+- Do not apply code edits through Python heredoc scripts when the replaced text has backslash escapes (`\n`, `\`) or non-ASCII characters: the escaping changes between bash, Python and the file, or Windows reads the script as cp1252, and the edit silently fails or writes real newlines. Use the Edit tool for those.
+- When a test inspects an LLM prompt, record the system prompt and the user prompt separately: the system prompt names the delimiter tags, so counting or splitting on tags over both gives false failures.
+- When a scripted multi file edit fails part way, check which files actually changed before running tests: a Playwright run passed while its config edit had not applied, only because development defaults happened to match. Passing for the wrong reason hides flakiness (here, a scheduler racing the test).
+- Screen reader only text after visible text needs an explicit `{' '}` before the hidden span; a space inside the span is dropped from the accessible name ("Downloadposting-flow.pdf"). Assert link names in tests.
+- Never link a real folder (junction or symlink) into a temporary git worktree: `git worktree remove --force` followed the junction and deleted part of the real `node_modules`. Copy what the worktree needs, or remove the link itself first (`[System.IO.Directory]::Delete(link)`) and only then the worktree; afterwards check with `npm ls`.
+- Keep scratch screenshot specs outside `e2e/` while running the real suite: extra sign ins in parallel workers hit the login rate limit and failed unrelated tests. A failing gate in a `;` chain still lets the commit through; chain gates with `&&` or check the result before committing.
+- `composes: x from './shared.module.css'` copies the whole shared file into every chunk that composes from it. For classes many modules share, load one global stylesheet and use `composes: x from global`.
 

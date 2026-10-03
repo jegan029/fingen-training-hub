@@ -5,6 +5,7 @@ import { fetchCertificate } from '../api'
 import type { CertificateStatus } from '../types'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
+import { meterStyle } from '../lib/motion'
 import page from '../styles/page.module.css'
 import styles from './Certificate.module.css'
 
@@ -61,7 +62,7 @@ function Requirements({ cert }: { cert: CertificateStatus }) {
                 aria-valuemax={100}
                 aria-valuenow={pct}
               >
-                <span className={`${page.fill} ${done ? page.fillSuccess : ''}`} style={{ width: `${pct}%` }} />
+                <span className={`${page.fill} ${done ? page.fillSuccess : ''}`} style={meterStyle(pct)} />
               </span>
             </div>
           )

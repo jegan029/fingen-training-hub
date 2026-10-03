@@ -1,0 +1,2 @@
+# Synthetic ServiceNow attachments are compared by size and hash; keep their bytes exact.
+backend/app/integrations/servicenow/fixtures/files/** binary

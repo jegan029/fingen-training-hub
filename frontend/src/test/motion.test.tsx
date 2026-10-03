@@ -1,8 +1,9 @@
 import { act, render, renderHook, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useCountUp } from '../lib/motion'
+import { meterStyle, navigateWithTransition, useCountUp } from '../lib/motion'
 import HomePage from '../routes/HomePage'
+import ProgressRing from '../components/ui/ProgressRing'
 import * as api from '../api'
 
 function mockMatchMedia(reduce: boolean) {
@@ -74,5 +75,99 @@ describe('home page motion', () => {
     expect(screen.getByRole('img', { name: '3% of all topics done' })).toBeInTheDocument()
     // The hero roadmap preview is decorative.
     expect(container.querySelector('svg[aria-hidden="true"][viewBox="0 0 360 400"]')).not.toBeNull()
+  })
+})
+
+describe('navigateWithTransition', () => {
+  const doc = document as unknown as { startViewTransition?: unknown }
+
+  afterEach(() => {
+    delete doc.startViewTransition
+  })
+
+  it('navigates straight away where the View Transitions API is missing', () => {
+    mockMatchMedia(false)
+    const navigate = vi.fn()
+    navigateWithTransition(navigate, '/roadmaps', { replace: true })
+    expect(navigate).toHaveBeenCalledWith('/roadmaps', { replace: true })
+  })
+
+  it('skips the transition under reduced motion', () => {
+    mockMatchMedia(true)
+    const start = vi.fn()
+    doc.startViewTransition = start
+    const navigate = vi.fn()
+    navigateWithTransition(navigate, '/chat')
+    expect(start).not.toHaveBeenCalled()
+    expect(navigate).toHaveBeenCalledWith('/chat', {})
+  })
+
+  it('navigates inside a view transition when available', async () => {
+    mockMatchMedia(false)
+    let update: (() => Promise<void> | void) | undefined
+    doc.startViewTransition = vi.fn((cb: () => Promise<void> | void) => {
+      update = cb
+      return { ready: Promise.resolve() }
+    })
+    const navigate = vi.fn()
+    navigateWithTransition(navigate, -1)
+    expect(navigate).not.toHaveBeenCalled()
+    await update?.()
+    expect(navigate).toHaveBeenCalledWith(-1)
+  })
+})
+
+describe('navigateWithTransition waiting for a shared element', () => {
+  const doc = document as unknown as { startViewTransition?: unknown }
+
+  afterEach(() => {
+    delete doc.startViewTransition
+    document.body.innerHTML = ''
+  })
+
+  it('finishes while rendering is paused (no animation frames during the update)', async () => {
+    mockMatchMedia(false)
+    // Browsers pause frames during a view transition update; a frame based wait would hang.
+    vi.stubGlobal('requestAnimationFrame', () => 0)
+    let update: (() => Promise<void> | void) | undefined
+    doc.startViewTransition = vi.fn((cb: () => Promise<void> | void) => {
+      update = cb
+      return { ready: Promise.resolve() }
+    })
+    // The new page renders its heading a moment later (lazy route, data), as in the browser.
+    const navigate = vi.fn(() => {
+      setTimeout(() => {
+        const heading = document.createElement('h1')
+        heading.dataset.sharedTitle = 'node-title-1'
+        document.body.append(heading)
+      }, 30)
+    })
+    navigateWithTransition(navigate, '/learn/1', { waitFor: '[data-shared-title="node-title-1"]' })
+    await expect(update?.()).resolves.toBeUndefined()
+    expect(navigate).toHaveBeenCalledWith('/learn/1', {})
+  })
+})
+
+describe('meterStyle', () => {
+  it('clamps the percentage to the track', () => {
+    expect(meterStyle(40)).toEqual({ '--p': 0.4 })
+    expect(meterStyle(140)).toEqual({ '--p': 1 })
+    expect(meterStyle(-5)).toEqual({ '--p': 0 })
+  })
+})
+
+describe('ProgressRing', () => {
+  it('shows the final value at once under reduced motion and exposes it as a progress bar', () => {
+    mockMatchMedia(true)
+    render(<ProgressRing value={40} label="Platform Core progress" />)
+    const bar = screen.getByRole('progressbar', { name: 'Platform Core progress' })
+    expect(bar).toHaveAttribute('aria-valuenow', '40')
+    expect(bar).toHaveTextContent('40%')
+  })
+
+  it('clamps and rounds the value', () => {
+    mockMatchMedia(true)
+    render(<ProgressRing value={104.6} label="Over" />)
+    expect(screen.getByRole('progressbar', { name: 'Over' })).toHaveAttribute('aria-valuenow', '100')
   })
 })

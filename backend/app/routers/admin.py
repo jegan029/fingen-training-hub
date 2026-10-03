@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
+from ..config import logger
 from ..db import connection
-from ..schemas import WeakTopic
+from ..schemas import ClearanceUpdate, WeakTopic
+from ..security import limiter
 
 router = APIRouter()
 
@@ -52,7 +54,7 @@ def list_admin_users() -> list:
             for row in paths
         }
 
-        users = conn.execute("SELECT id, name, email FROM users ORDER BY id").fetchall()
+        users = conn.execute("SELECT id, name, email, role, max_classification FROM users ORDER BY id").fetchall()
 
         result = []
         for user in users:
@@ -96,6 +98,8 @@ def list_admin_users() -> list:
                     "id": uid,
                     "name": user["name"],
                     "email": user["email"],
+                    "role": user["role"],
+                    "max_classification": user["max_classification"],
                     "last_active": last_active,
                     "paths": path_data,
                     "overall_pct": overall_pct,
@@ -103,3 +107,17 @@ def list_admin_users() -> list:
             )
 
     return result
+
+
+@router.put("/users/{user_id}/clearance")
+@limiter.limit("30/minute")
+def set_clearance(request: Request, user_id: int, payload: ClearanceUpdate) -> dict:
+    """Set the highest classification a user may read. Takes effect on their next request."""
+    with connection() as conn:
+        cur = conn.execute(
+            "UPDATE users SET max_classification = ? WHERE id = ?", (payload.max_classification, user_id)
+        )
+    if cur.rowcount == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    logger.info("Admin %s set user %s clearance to %s", request.state.user.id, user_id, payload.max_classification)
+    return {"id": user_id, "max_classification": payload.max_classification}

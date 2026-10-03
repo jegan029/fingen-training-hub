@@ -44,7 +44,7 @@ describe('command palette', () => {
     renderPalette()
 
     fireEvent.keyDown(window, { key: 'k', ctrlKey: true })
-    const input = screen.getByRole('combobox', { name: 'Search paths, topics and runbooks' })
+    const input = screen.getByRole('combobox', { name: 'Search paths, topics, runbooks and articles' })
     expect(input).toHaveFocus()
 
     fireEvent.change(input, { target: { value: 'settle' } })

@@ -21,45 +21,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DATASET = ROOT / "backend" / "app" / "data" / "demo_dataset.json"
 
-DASH = re.compile(r"[—–]|(?<=\S) -{1,2} (?=\S)|(?<=\w)--(?=\w)")
+# The rule's patterns live in the backend, where content ingestion applies the same rule.
+sys.path.insert(0, str(ROOT / "backend"))
+from app.services.prose import COMPOUNDS, DASH, FENCE, INLINE_CODE, LIST_MARKER, SQL, find, prose  # noqa: E402,F401
 
 NODE_FIELDS = ("title", "description", "content", "sample_question", "sample_answer",
                "scenario_context", "scenario_options", "scenario_explanation")
 RUNBOOK_FIELDS = ("title", "category", "description", "preconditions", "steps", "escalation_triggers")
 PATH_FIELDS = ("title", "description")
-
-FENCE = re.compile(r"```.*?```", re.DOTALL)
-INLINE_CODE = re.compile(r"`[^`\n]*`")
-# SQL statements (runbook steps, sample answers, scenario options): up to the next semicolon or the
-# end of the text. Keywords must be followed by SQL structure so prose like "SELECT only" is kept.
-SQL = re.compile(r"\b(?:SELECT\b[^;]*?\bFROM\b|UPDATE\s+\w+\s+SET\b|INSERT\s+INTO\b|DELETE\s+FROM\b)[^;]*;?")
-LIST_MARKER = re.compile(r"^(\s*)- ", re.MULTILINE)
-SKIP_FILES = {"check_no_dashes.py"}
-
-
-def prose(text: str, sql: bool = False) -> str:
-    """Remove code and markdown syntax, leaving only text a reader sees as prose."""
-    text = FENCE.sub(" ", text)
-    text = INLINE_CODE.sub(" ", text)
-    if sql:
-        text = SQL.sub(" ", text)
-    return LIST_MARKER.sub(r"\1", text)
-
-
-# Hyphenated compounds that were rewritten in prose; flagged so they do not creep back in.
-COMPOUNDS = re.compile(
-    r"(?<![\w/.@-])(real-time|open-ended|multiple-choice|day-one|end-to-end|read-only|on-call|"
-    r"pre-production|platform-wide|client-facing|cut-off|re-run|re-running)(?![\w/-])",
-    re.IGNORECASE,
-)
-
-
-def find(text: str) -> list[str]:
-    hits = []
-    for m in [*DASH.finditer(text), *COMPOUNDS.finditer(text)]:
-        start, end = max(0, m.start() - 30), min(len(text), m.end() + 30)
-        hits.append(text[start:end].replace("\n", " "))
-    return hits
+# prose.py holds the dash patterns themselves.
+SKIP_FILES = {"check_no_dashes.py", "prose.py"}
 
 
 def flatten(value) -> list[str]:

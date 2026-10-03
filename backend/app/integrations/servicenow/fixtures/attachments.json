@@ -1,0 +1,56 @@
+[
+  {
+    "sys_id": "e0000000000000000000000000000001",
+    "table_name": "kb_knowledge",
+    "table_sys_id": "a0000000000000000000000000000001",
+    "file_name": "posting-flow.pdf",
+    "content_type": "application/pdf",
+    "size_bytes": "573",
+    "file": "posting-flow.pdf"
+  },
+  {
+    "sys_id": "e0000000000000000000000000000002",
+    "table_name": "kb_knowledge",
+    "table_sys_id": "a0000000000000000000000000000002",
+    "file_name": "month-end-checklist.docx",
+    "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "size_bytes": "925",
+    "file": "month-end-checklist.docx"
+  },
+  {
+    "sys_id": "e0000000000000000000000000000003",
+    "table_name": "kb_knowledge",
+    "table_sys_id": "a0000000000000000000000000000003",
+    "file_name": "timeout-dashboard.png",
+    "content_type": "image/png",
+    "size_bytes": "83",
+    "file": "timeout-dashboard.png"
+  },
+  {
+    "sys_id": "e0000000000000000000000000000004",
+    "table_name": "kb_knowledge",
+    "table_sys_id": "a0000000000000000000000000000006",
+    "file_name": "stuck-job-query.txt",
+    "content_type": "text/plain",
+    "size_bytes": "48",
+    "file": "stuck-job-query.txt"
+  },
+  {
+    "sys_id": "e0000000000000000000000000000005",
+    "table_name": "kb_knowledge",
+    "table_sys_id": "a0000000000000000000000000000004",
+    "file_name": "key-ceremony.pdf",
+    "content_type": "application/pdf",
+    "size_bytes": "573",
+    "file": "key-ceremony.pdf"
+  },
+  {
+    "sys_id": "e0000000000000000000000000000006",
+    "table_name": "kb_knowledge",
+    "table_sys_id": "a000000000000000000000000000000b",
+    "file_name": "export-checklist.pdf",
+    "content_type": "application/pdf",
+    "size_bytes": "64",
+    "file": "export-checklist.pdf"
+  }
+]

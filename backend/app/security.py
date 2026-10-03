@@ -18,6 +18,8 @@ class CurrentUser:
     name: str
     email: str
     role: str
+    # Highest classification this user may read; reloaded with the user on every request.
+    max_classification: str = "public"
 
     @property
     def is_admin(self) -> bool:
@@ -64,10 +66,18 @@ def get_current_user(request: Request) -> CurrentUser:
         raise _unauthorized() from None
     # Reload from the database so deleted users and role changes take effect immediately.
     with connection() as conn:
-        row = conn.execute("SELECT id, name, email, role FROM users WHERE id = ?", (user_id,)).fetchone()
+        row = conn.execute(
+            "SELECT id, name, email, role, max_classification FROM users WHERE id = ?", (user_id,)
+        ).fetchone()
     if not row:
         raise _unauthorized()
-    user = CurrentUser(id=row["id"], name=row["name"], email=row["email"], role=row["role"])
+    user = CurrentUser(
+        id=row["id"],
+        name=row["name"],
+        email=row["email"],
+        role=row["role"],
+        max_classification=row["max_classification"],
+    )
     request.state.user = user
     return user
 

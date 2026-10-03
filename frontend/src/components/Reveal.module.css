@@ -1,0 +1,17 @@
+.reveal {
+  transition:
+    opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out);
+}
+
+.reveal[data-hidden] {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+@media print {
+  .reveal[data-hidden] {
+    opacity: 1;
+    transform: none;
+  }
+}

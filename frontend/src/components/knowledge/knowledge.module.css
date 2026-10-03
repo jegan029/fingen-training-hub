@@ -1,0 +1,126 @@
+/* Shared knowledge pieces: classification badge, source tag, file icon, sync banner, filter chips. */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-full);
+  font: 700 var(--text-xs) / 1.5 var(--font-sans);
+  white-space: nowrap;
+}
+
+/* Read by screen readers only ("Classification: Internal"). */
+.srLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* Colour supports the text and icon; it never carries the meaning alone. */
+.public {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+.internal {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+.confidential {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+.restricted {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font: 600 var(--text-xs) / 1.5 var(--font-sans);
+  white-space: nowrap;
+}
+
+.fileIcon {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-warning);
+  border-radius: var(--radius-sm);
+  background: var(--color-warning-soft);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.bannerIcon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--color-warning);
+}
+
+.banner p {
+  margin: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: 600 var(--text-xs) / 1.6 var(--font-sans);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+.chip:hover {
+  border-color: var(--color-accent);
+}
+
+.chip[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-accent-contrast);
+}
+
+.chipCount {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    transition: none;
+  }
+}

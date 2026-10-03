@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 .venv/
 backend/app/data/app.db
+backend/app/data/kb_documents/
 
 # Node
 node_modules/

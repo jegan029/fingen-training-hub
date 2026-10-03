@@ -1,0 +1,150 @@
+.crumbs {
+  padding: 0;
+  list-style: none;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.hint {
+  flex-basis: 100%;
+  margin: 0;
+  max-width: 60ch;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: var(--space-5);
+}
+
+.body {
+  min-width: 0;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Cards in the side column are spaced by the flex gap, not the shared .card + .card rule. */
+.side > * + * {
+  margin-top: 0;
+}
+
+/* Labels sit above values: the side column is too narrow for two columns without breaking words. */
+.meta {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.meta dt {
+  color: var(--color-text-muted);
+  font: 600 var(--text-xs) / 1.4 var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.meta dt:not(:first-child) {
+  margin-top: var(--space-3);
+}
+
+.meta dd {
+  margin: 2px 0 0;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.meta a,
+.links a {
+  color: var(--color-accent);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+.plainList,
+.docs,
+.links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plainList li + li {
+  margin-top: var(--space-1);
+}
+
+.doc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.doc:last-child {
+  border-bottom: 0;
+}
+
+.docName {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.docSize {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.links li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  column-gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-1) 0;
+  font-size: var(--text-sm);
+}
+
+.links li > svg {
+  color: var(--color-text-muted);
+  transform: translateY(2px);
+}
+
+.sub {
+  grid-column: 2;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.loadingBody {
+  margin-top: var(--space-5);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,3 +10,4 @@ tests
 *.log
 app/data/app.db
 app/data/*.db
+app/data/kb_documents

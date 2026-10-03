@@ -1,8 +1,7 @@
 .skeleton {
   display: block;
   border-radius: var(--radius-md);
-  background: var(--color-surface-2);
-  animation: pulse 1.2s ease-in-out infinite;
+  composes: motion-sheen from global;
 }
 
 .skeletonStack {
@@ -11,13 +10,8 @@
   gap: var(--space-3);
 }
 
-@keyframes pulse {
-  50% {
-    opacity: 0.5;
-  }
-}
-
 .state {
+  composes: motion-rise from global;
   display: flex;
   flex-direction: column;
   align-items: center;

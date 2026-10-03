@@ -14,6 +14,10 @@ os.environ.update(
         "LOGIN_LOCKOUT_THRESHOLD": "3",
         "LLM_API_KEY": "",
         "LLM_MODEL": "",
+        # Mock mode, no background schedule: tests run syncs explicitly.
+        "SERVICENOW_ENABLED": "true",
+        "SERVICENOW_MOCK_MODE": "true",
+        "SERVICENOW_SCHEDULER": "false",
     }
 )
 

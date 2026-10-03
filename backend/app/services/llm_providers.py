@@ -167,7 +167,8 @@ class OfflineProvider:
     def _chat(self, prompt: str) -> str:
         question = _terms(_tag(prompt, "learner_input"))
         best, best_overlap = "", 0
-        for section in _sections(_tag(prompt, "knowledge_base")):
+        reference = _tag(prompt, "knowledge_base") or _tag(prompt, "reference_article")
+        for section in _sections(reference):
             overlap = len(question & _terms(section))
             if overlap > best_overlap:
                 best, best_overlap = section, overlap

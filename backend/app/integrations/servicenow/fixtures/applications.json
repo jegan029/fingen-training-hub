@@ -1,0 +1,26 @@
+[
+  {
+    "sys_id": "c0000000000000000000000000000001",
+    "number": "APM0001001",
+    "name": "Ledger Gateway",
+    "short_description": "Posts journal entries from the payment platform to the general ledger."
+  },
+  {
+    "sys_id": "c0000000000000000000000000000002",
+    "number": "APM0001002",
+    "name": "Card Switch",
+    "short_description": "Routes card authorisations between the platform and card schemes."
+  },
+  {
+    "sys_id": "c0000000000000000000000000000003",
+    "number": "APM0001003",
+    "name": "Batch Scheduler",
+    "short_description": "Runs and monitors the overnight batch chain."
+  },
+  {
+    "sys_id": "c0000000000000000000000000000004",
+    "number": "APM0001004",
+    "name": "Client Portal",
+    "short_description": "Web portal where client operators view payments and reports."
+  }
+]

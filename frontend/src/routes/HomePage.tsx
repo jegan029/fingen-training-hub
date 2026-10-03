@@ -6,7 +6,7 @@ import type { ContinueNode, ProgressOverview, ProgressSummary } from '../types'
 import Picture from '../components/Picture'
 import HeroRoadmap from '../components/HeroRoadmap'
 import { illustrations, type PhotoName } from '../assets/images'
-import { useCountUp, useInView } from '../lib/motion'
+import { meterStyle, useCountUp, useInView } from '../lib/motion'
 import styles from './HomePage.module.css'
 
 type CardMedia = { photo: PhotoName; alt: string } | { svg: string; alt: string }
@@ -431,7 +431,7 @@ export default function HomePage() {
                       aria-valuemax={100}
                       aria-valuenow={p.pct}
                     >
-                      <div className={styles.fill} style={{ width: `${p.pct}%` }} />
+                      <div className={styles.fill} style={meterStyle(p.pct)} />
                     </div>
                     <p className={styles.pathPct}>{p.pct}% complete</p>
                   </Link>

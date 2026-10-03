@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { defineConfig, devices } from '@playwright/test'
-import { E2E_LEARNER } from './e2e/accounts'
+import { E2E_ADMIN, E2E_LEARNER } from './e2e/accounts'
 
 /*
  * End to end tests run against their own backend (fresh SQLite file, offline LLM provider)
@@ -53,9 +53,13 @@ export default defineConfig({
         APP_ENV: 'development',
         APP_SECRET_KEY: 'e2e-only-secret-key-that-is-at-least-32-bytes', // gitleaks:allow (test-only value)
         DB_PATH: dbPath,
-        SEED_ADMIN_PASSWORD: 'e2e-admin-password', // gitleaks:allow (test-only value)
+        SEED_ADMIN_PASSWORD: E2E_ADMIN.password,
         SEED_LEARNER_PASSWORD: E2E_LEARNER.password,
         LLM_PROVIDER: 'offline',
+        // ServiceNow in mock mode (synthetic fixtures, no network). No schedule: the admin test syncs.
+        SERVICENOW_ENABLED: 'true',
+        SERVICENOW_MOCK_MODE: 'true',
+        SERVICENOW_SCHEDULER: 'false',
         CORS_ORIGINS: `http://localhost:${WEB_PORT}`,
       },
     },

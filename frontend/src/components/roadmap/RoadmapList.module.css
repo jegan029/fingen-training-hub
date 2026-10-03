@@ -10,6 +10,7 @@
 }
 
 .item {
+  composes: motion-rise from global;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -24,6 +25,7 @@
 }
 
 .main {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -50,9 +52,6 @@
   background: var(--rm-done-bg);
   border-color: var(--rm-done-border);
 }
-.main[data-status='done'] .title {
-  text-decoration: line-through;
-}
 .main[data-status='in_progress'] {
   outline: 3px solid var(--color-accent);
   outline-offset: 2px;
@@ -75,4 +74,91 @@
   gap: var(--space-1);
   font: 500 var(--text-sm) / 1.4 var(--font-sans);
   color: var(--color-text);
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+/* Completion moment, as on the canvas: a ring from the topic just done, then from each topic it unlocked. */
+.main::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--color-success);
+  border-radius: calc(var(--radius-md) + 5px);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.main[data-celebrate='done']::after,
+.main[data-celebrate='unlocked']::after {
+  animation: ring var(--motion-draw) var(--ease-out);
+}
+
+.main[data-celebrate='unlocked']::after {
+  border-color: var(--color-accent);
+  animation-delay: var(--motion-slow);
+}
+
+.icon[data-celebrate='unlocked'] {
+  --delay: var(--motion-slow);
+}
+
+@keyframes ring {
+  from {
+    opacity: 1;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+/* Completing the path: each topic icon pulses once, spreading out from the topic just done. */
+.icon[data-celebrate='sweep'] {
+  animation: sweep var(--motion-base) var(--ease-out);
+  animation-delay: calc(var(--motion-slow) + var(--i, 0) * var(--stagger-step));
+}
+
+@keyframes sweep {
+  50% {
+    transform: scale(1.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon[data-celebrate='sweep'] {
+    animation-name: sweepFade;
+    animation-timing-function: linear;
+  }
+
+  .main[data-celebrate='done']::after,
+  .main[data-celebrate='unlocked']::after {
+    animation: ringFade var(--motion-draw) linear;
+  }
+}
+
+/* Reduced motion keeps the confirmation without movement: rings and the lit connector fade, nothing spreads or draws. */
+@keyframes fadeOnly {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ringFade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes sweepFade {
+  50% {
+    opacity: 0.35;
+  }
 }
