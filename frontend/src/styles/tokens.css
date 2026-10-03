@@ -44,6 +44,16 @@
   --rm-done-bg: #e3f4e9;
   --rm-done-border: #13723a;
 
+  /* Sign in scene: the brand panel stays dark in both themes, so these are not redefined for dark. */
+  --scene-navy: #020b5b;
+  --scene-signal: #001aff;
+  --scene-violet: #4b1fd1;
+  --scene-night: #060a2e;
+  --scene-star: #aab4e8;
+  --scene-lit: #5fd08d;
+  --scene-text: #f1f3fb;
+  --scene-text-muted: #c3c9e8;
+
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
   --font-display: 'Playfair Display', Georgia, serif;

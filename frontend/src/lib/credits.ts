@@ -45,6 +45,14 @@ export const IMAGE_CREDITS: ImageCredit[] = [
     licenceUrl: PEXELS,
   },
   {
+    usedFor: 'Sign in page',
+    author: 'Cookiecutter',
+    source: 'Pexels',
+    sourceUrl: 'https://www.pexels.com/photo/network-rack-17323801/',
+    licence: 'Pexels License',
+    licenceUrl: PEXELS,
+  },
+  {
     usedFor: 'Home hero, Transaction and Data Flows, AI Tutor',
     author: 'FinGen Training Hub',
     source: 'Original illustrations',

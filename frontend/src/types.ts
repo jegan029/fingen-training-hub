@@ -122,6 +122,13 @@ export interface AdminUser {
   overall_pct: number
 }
 
+/** Mirrors schemas.PublicStats: the sign in page's aggregate counts. */
+export interface PublicStats {
+  paths: number
+  lessons: number
+  runbooks: number
+}
+
 export interface AuthUser {
   id: number
   name: string

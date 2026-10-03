@@ -1,5 +1,6 @@
 import type {
   AccessLogEntry,
+  PublicStats,
   AdminUser,
   ApplicationDetail,
   ApplicationSummary,
@@ -38,6 +39,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Seconds to wait before retrying, from the Retry-After header on a 429. */
+    public retryAfter?: number,
   ) {
     super(message)
   }
@@ -69,7 +72,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, message)
+    const retryAfter = Number(res.headers.get('Retry-After'))
+    throw new ApiError(res.status, message, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
@@ -80,6 +84,11 @@ export async function loginUser(email: string, password: string): Promise<AuthUs
     method: 'POST',
     body: JSON.stringify({ email, password }),
   })
+}
+
+/** Aggregate counts for the sign in page; public, no session needed. */
+export async function fetchPublicStats(): Promise<PublicStats> {
+  return request<PublicStats>('/public/stats')
 }
 
 export async function fetchMe(): Promise<AuthUser> {

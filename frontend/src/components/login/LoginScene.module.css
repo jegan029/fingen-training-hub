@@ -1,0 +1,141 @@
+/* Fills the brand panel. Layers, back to front: mesh, photo, contrast overlay, constellation. */
+.scene {
+  --px: 0;
+  --py: 0;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--scene-navy);
+  pointer-events: none;
+}
+
+.mesh {
+  position: absolute;
+  inset: -20%;
+}
+
+/* Three soft brand colour fields that drift on long, out of step loops (transform only). */
+.blobA,
+.blobB,
+.blobC {
+  position: absolute;
+  border-radius: 50%;
+  will-change: transform;
+}
+
+.blobA {
+  top: 0;
+  left: 0;
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--scene-signal) 70%, transparent), transparent);
+  animation: driftA 26s var(--ease-in-out) infinite alternate;
+}
+
+.blobB {
+  right: 0;
+  bottom: 0;
+  width: 75%;
+  height: 75%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--scene-violet) 80%, transparent), transparent);
+  animation: driftB 22s var(--ease-in-out) infinite alternate;
+}
+
+.blobC {
+  top: 30%;
+  left: 30%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--scene-navy) 90%, transparent), transparent);
+  animation: driftC 30s var(--ease-in-out) infinite alternate;
+}
+
+@keyframes driftA {
+  to {
+    transform: translate(18%, 12%) scale(1.15);
+  }
+}
+
+@keyframes driftB {
+  to {
+    transform: translate(-16%, -10%) rotate(25deg);
+  }
+}
+
+@keyframes driftC {
+  to {
+    transform: translate(-12%, 14%) scale(0.85);
+  }
+}
+
+.photo {
+  position: absolute;
+  inset: 0;
+  transform: translate3d(calc(var(--px) * -6px), calc(var(--py) * -6px), 0) scale(1.03);
+  transition: transform 600ms var(--ease-out);
+  animation: photoIn 1200ms var(--ease-out) backwards;
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% 70%;
+  opacity: 0.62;
+}
+
+@keyframes photoIn {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Keeps text at 4.5:1 or better: darkest where the copy sits (left and bottom), lighter over the server aisle. */
+.overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--scene-night) 94%, transparent) 0%,
+      color-mix(in srgb, var(--scene-night) 84%, transparent) 42%,
+      color-mix(in srgb, var(--scene-night) 40%, transparent) 78%,
+      color-mix(in srgb, var(--scene-night) 20%, transparent) 100%
+    ),
+    linear-gradient(0deg, color-mix(in srgb, var(--scene-night) 70%, transparent), transparent 40%);
+}
+
+.constellation {
+  position: absolute;
+  /* The right of the panel, clear of the copy column. */
+  inset: 0 2% 0 54%;
+  transform: translate3d(calc(var(--px) * -12px), calc(var(--py) * -12px), 0);
+  transition: transform 600ms var(--ease-out);
+}
+
+.scene[data-paused] * {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blobA,
+  .blobB,
+  .blobC,
+  .photo {
+    animation: none;
+  }
+
+  .photo,
+  .constellation {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Phones: mesh only, no constellation work behind the card. */
+@media (max-width: 767px) {
+  .constellation {
+    display: none;
+  }
+}

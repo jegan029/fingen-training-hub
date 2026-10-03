@@ -2,133 +2,122 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError, loginUser } from '../api'
 import { useAuth } from '../context/AuthContext'
-import Logo from '../components/Logo'
-import page from '../styles/page.module.css'
+import ThemeToggle from '../components/ThemeToggle'
+import BrandPanel from '../components/login/BrandPanel'
+import LoginScene from '../components/login/LoginScene'
+import SignInCard, { type SignInPhase } from '../components/login/SignInCard'
+import { navigateWithTransition } from '../lib/motion'
 import styles from './LoginPage.module.css'
+
+// How long the check on the button shows before home takes over (the transition itself is 250 ms).
+const SUCCESS_HOLD_MS = 200
+// Used only if a 429 arrives without Retry-After; the login limit is 5 per minute.
+const FALLBACK_WAIT_S = 60
 
 export default function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [phase, setPhase] = useState<SignInPhase>('idle')
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  // Seconds left before another attempt is allowed, and whether a rate limit is (or was) in force.
+  const [retryIn, setRetryIn] = useState(0)
+  const [limited, setLimited] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   /* Already logged in → go home */
   useEffect(() => {
-    if (user) navigate('/', { replace: true })
-  }, [user, navigate])
+    if (user && phase === 'idle') navigate('/', { replace: true })
+  }, [user, phase, navigate])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.trim() || !password) return
+  useEffect(() => {
+    if (retryIn <= 0) return
+    const timer = window.setTimeout(() => setRetryIn((s) => s - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [retryIn])
+
+  const handleSubmit = async () => {
     setError(null)
-    setLoading(true)
+    setLimited(false)
+    setPhase('submitting')
     try {
       const u = await loginUser(email.trim(), password)
-      login(u)
-      navigate('/', { replace: true })
+      setPhase('success')
+      window.setTimeout(() => {
+        navigateWithTransition(navigate, '/', { replace: true, prepare: () => login(u), kind: 'signin' })
+      }, SUCCESS_HOLD_MS)
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 429
-          ? 'Too many sign in attempts. Please wait a minute and try again.'
-          : 'Invalid email or password. Please try again.',
-      )
-    } finally {
-      setLoading(false)
+      setPhase('idle')
+      setAttempt((n) => n + 1)
+      if (err instanceof ApiError && err.status === 429) {
+        setLimited(true)
+        setRetryIn(err.retryAfter ?? FALLBACK_WAIT_S)
+      } else {
+        setError('Invalid email or password. Please try again.')
+      }
     }
   }
 
+  const status = limited
+    ? retryIn > 0
+      ? `Too many attempts. Try again in ${retryIn} ${retryIn === 1 ? 'second' : 'seconds'}.`
+      : 'You can try again now.'
+    : error
+
   return (
     <div className={styles.screen}>
-      <div className={styles.logo}>
-        <Logo tone="light" size={36} />
-      </div>
+      <section className={styles.brand} aria-label="About FinGen Training Hub">
+        <LoginScene />
+        <BrandPanel />
+      </section>
 
-      <div className={styles.card}>
-        <div className={styles.cardHead}>
-          <h1 className={styles.title}>Sign in</h1>
-          <p className={styles.subtitle}>L2 Support Engineer Onboarding Platform</p>
-        </div>
+      <div className={styles.signin}>
+        <div className={styles.center}>
+          <SignInCard
+            email={email}
+            password={password}
+            onEmail={(v) => {
+              setEmail(v)
+              if (!limited) setError(null)
+            }}
+            onPassword={setPassword}
+            onSubmit={handleSubmit}
+            phase={phase}
+            status={status}
+            retryIn={retryIn}
+            attempt={attempt}
+          />
 
-        <form onSubmit={handleSubmit}>
-          <div className={page.field}>
-            <label className={page.label} htmlFor="login-email">
-              Email address
-            </label>
-            <input
-              id="login-email"
-              className={page.input}
-              type="email"
-              placeholder="you@fingen.demo"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={loading}
-              autoFocus
-              autoComplete="email"
-            />
-          </div>
-
-          <div className={page.field}>
-            <label className={page.label} htmlFor="login-password">
-              Password
-            </label>
-            <input
-              id="login-password"
-              className={page.input}
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-              autoComplete="current-password"
-            />
-          </div>
-
-          {error && (
-            <p className={page.error} role="alert">
-              {error}
-            </p>
+          {/* Development builds only; passwords are never shipped in the bundle. */}
+          {import.meta.env.DEV && (
+            <aside className={styles.dev} aria-label="Development build">
+              <p className={styles.devTitle}>Development build</p>
+              <p className={styles.devText}>Demo accounts (passwords come from the backend .env or its console):</p>
+              <div className={styles.devRow}>
+                {['admin@fingen.demo', 'learner@fingen.demo'].map((demo) => (
+                  <button
+                    key={demo}
+                    type="button"
+                    className={styles.devEmail}
+                    onClick={() => {
+                      setEmail(demo)
+                      setError(null)
+                    }}
+                  >
+                    {demo}
+                  </button>
+                ))}
+              </div>
+            </aside>
           )}
-
-          <button
-            type="submit"
-            className={`${page.btn} ${page.btnPrimary} ${styles.submit}`}
-            disabled={loading || !email.trim() || !password}
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </div>
-
-      {/* Demo accounts (development builds only; passwords are never shipped in the bundle) */}
-      {import.meta.env.DEV && (
-        <div className={styles.demo}>
-          <p className={styles.demoTitle}>Demo accounts</p>
-          {[
-            { role: 'Admin', email: 'admin@fingen.demo' },
-            { role: 'Learner', email: 'learner@fingen.demo' },
-          ].map((c) => (
-            <div key={c.role} className={styles.demoRow}>
-              <span className={styles.demoRole}>{c.role}</span>
-              <button
-                type="button"
-                className={styles.demoEmail}
-                onClick={() => {
-                  setEmail(c.email)
-                  setError(null)
-                }}
-              >
-                {c.email}
-              </button>
-            </div>
-          ))}
-          <p className={styles.demoNote}>
-            Click an email to fill it in. Passwords come from SEED_ADMIN_PASSWORD and SEED_LEARNER_PASSWORD, or are
-            printed in the backend console when the accounts are first created.
-          </p>
         </div>
-      )}
+
+        <footer className={styles.smallPrint}>
+          <span>Version {__APP_VERSION__}</span>
+          <ThemeToggle />
+        </footer>
+      </div>
     </div>
   )
 }

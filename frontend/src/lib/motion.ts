@@ -96,12 +96,16 @@ export function meterStyle(pct: number): CSSProperties {
 }
 
 type ViewTransitionDocument = Document & {
-  startViewTransition?: (update: () => Promise<void> | void) => { ready: Promise<void> }
+  startViewTransition?: (update: () => Promise<void> | void) => { ready: Promise<void>; finished?: Promise<void> }
 }
 
 export interface TransitionOptions extends NavigateOptions {
   /** CSS selector of an element the new page must show before the transition animates (a shared title). */
   waitFor?: string
+  /** State updates that must land in the same frame as the navigation (signing in before entering home). */
+  prepare?: () => void
+  /** Sets `html[data-transition]` while the transition runs, so CSS can give this one its own animation. */
+  kind?: string
 }
 
 // How long a transition may hold the old page while the new one renders its shared element.
@@ -128,14 +132,20 @@ function waitForElement(selector: string, limitMs: number): Promise<void> {
 export function navigateWithTransition(
   navigate: NavigateFunction,
   to: To | number,
-  { waitFor, ...options }: TransitionOptions = {},
+  { waitFor, prepare, kind, ...options }: TransitionOptions = {},
 ) {
-  const go = () => (typeof to === 'number' ? navigate(to) : navigate(to, options))
+  const go = () => {
+    prepare?.()
+    if (typeof to === 'number') navigate(to)
+    else navigate(to, options)
+  }
   const doc = document as ViewTransitionDocument
   if (typeof doc.startViewTransition !== 'function' || prefersReducedMotion()) {
     go()
     return
   }
+  const root = document.documentElement
+  if (kind) root.dataset.transition = kind
   const transition = doc.startViewTransition(async () => {
     flushSync(() => {
       go()
@@ -144,6 +154,11 @@ export function navigateWithTransition(
   })
   // A skipped transition (for example a second click) still navigates; nothing to report.
   transition.ready.catch(() => {})
+  if (kind) {
+    const clear = () => delete root.dataset.transition
+    if (transition.finished) transition.finished.then(clear, clear)
+    else clear()
+  }
 }
 
 /**

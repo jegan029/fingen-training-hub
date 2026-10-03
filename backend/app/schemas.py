@@ -20,6 +20,14 @@ class AuthUser(BaseModel):
     role: str
 
 
+class PublicStats(BaseModel):
+    """Aggregate counts for the sign in page; nothing else is public."""
+
+    paths: int
+    lessons: int
+    runbooks: int
+
+
 class LearningPathSummary(BaseModel):
     id: int
     slug: str

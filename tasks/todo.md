@@ -282,3 +282,14 @@ Thesis: done should feel like a clean shift handover; the work is acknowledged a
 - [x] Reduced motion: the sweep is an opacity pulse on the same timing; everything else is static
 - Changed from the plan: the sweep pulses icons in place (no fade out first) and spreads from the completed topic rather than top to bottom, because a path is finished at the bottom of the map where the learner is looking; several unlocked topics are counted in the visible line to keep it short
 - Verified: 94 Vitest, Playwright 5 (learner flow opens the next topic from the handover), 256 pytest, visual round at 1440 and 390, light and dark, reduced motion; sweep timing checked with `getAnimations()` (510 to 990 ms delays, done before the 1600 ms moment clears)
+
+## Login redesign (`feature/login-redesign`, stacked on `feature/motion`)
+Decisions: stack on `feature/motion`; `Retry-After` on 429 for a real countdown; no "Keep me signed in" (one fixed 8 hour session); photo A, an operator in blue light (Pexels 39071423), later replaced at the user's request by a blue server room aisle (Pexels 17323801, cropped to leave out the large rack label behind the copy).
+- [x] `GET /api/public/stats` (three counts, dataset runbooks only, cached 10 minutes, 30 a minute) and `Retry-After` on every 429; `ApiError.retryAfter`
+- [x] Split screen at 1024 px and wider (58/42, no scroll), tablet band with the card overlapping, phone card alone with the logo
+- [x] Brand panel: tagline, value list, counting stats (hidden on failure, space reserved while loading), rotating tips with pause (next tip under reduced motion), footer line
+- [x] Scene: drifting navy to violet mesh, photo at 900 and 1800 px (AVIF and WebP, phones skip it), contrast overlay, curriculum constellation that draws in, breathes and lights three done topics; parallax on wide fine pointers; paused when the tab is hidden
+- [x] Card: floating labels with icons, `username` and `current-password` autocomplete, show password (`aria-pressed`), Caps Lock warning, forgot password dialog, spinner then drawn check, shake and polite status on error, 429 countdown, success hands over to home with a fade and scale view transition
+- [x] Reduced motion: no drift, parallax, breathing, shake or counting
+- Changed from the brief: the development banner stays gated on a development build (`import.meta.env.DEV`) rather than `APP_ENV`, which the bundle cannot see; layout snapshots are geometry assertions with screenshots attached, since pixel baselines differ between Windows and Linux fonts; the image script gained per photo widths and aspect and skips missing sources
+- Verified: Vitest 104 (10 new), Playwright 12 (failed login and six layout checks added), pytest with 4 new tests, Lighthouse `/login` desktop 100/100/96 and mobile 95/100, no horizontal scroll at 150 and 200 percent zoom, main JS gzip 17.3 to 21.8 kB

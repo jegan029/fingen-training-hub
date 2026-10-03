@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from .config import CORS_ORIGINS, IS_DEV, logger
@@ -22,6 +21,7 @@ from .routers import (
     chat,
     knowledge,
     progress,
+    public,
     roadmap,
     runbooks,
     search,
@@ -33,6 +33,7 @@ from .security import (
     SecurityHeadersMiddleware,
     get_current_user,
     limiter,
+    rate_limit_exceeded,
     require_admin,
 )
 
@@ -71,7 +72,7 @@ app = FastAPI(
 )
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded)
 
 
 @app.exception_handler(Exception)
@@ -96,6 +97,8 @@ authenticated = [Depends(get_current_user)]
 admin_only = [Depends(require_admin)]
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+# Public on purpose: aggregate counts for the sign in page only (see routers/public.py).
+app.include_router(public.router, prefix="/api/public", tags=["Public"])
 app.include_router(roadmap.router, prefix="/api/roadmaps", tags=["Roadmaps"], dependencies=authenticated)
 app.include_router(progress.router, prefix="/api/progress", tags=["Progress"], dependencies=authenticated)
 app.include_router(assessment.router, prefix="/api/assessments", tags=["Assessments"], dependencies=authenticated)
