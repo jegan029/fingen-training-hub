@@ -1,7 +1,7 @@
 import { act, render, renderHook, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useCountUp } from '../lib/motion'
+import { meterStyle, navigateWithTransition, useCountUp } from '../lib/motion'
 import HomePage from '../routes/HomePage'
 import * as api from '../api'
 
@@ -74,5 +74,52 @@ describe('home page motion', () => {
     expect(screen.getByRole('img', { name: '3% of all topics done' })).toBeInTheDocument()
     // The hero roadmap preview is decorative.
     expect(container.querySelector('svg[aria-hidden="true"][viewBox="0 0 360 400"]')).not.toBeNull()
+  })
+})
+
+describe('navigateWithTransition', () => {
+  const doc = document as unknown as { startViewTransition?: unknown }
+
+  afterEach(() => {
+    delete doc.startViewTransition
+  })
+
+  it('navigates straight away where the View Transitions API is missing', () => {
+    mockMatchMedia(false)
+    const navigate = vi.fn()
+    navigateWithTransition(navigate, '/roadmaps', { replace: true })
+    expect(navigate).toHaveBeenCalledWith('/roadmaps', { replace: true })
+  })
+
+  it('skips the transition under reduced motion', () => {
+    mockMatchMedia(true)
+    const start = vi.fn()
+    doc.startViewTransition = start
+    const navigate = vi.fn()
+    navigateWithTransition(navigate, '/chat')
+    expect(start).not.toHaveBeenCalled()
+    expect(navigate).toHaveBeenCalledWith('/chat', {})
+  })
+
+  it('navigates inside a view transition when available', async () => {
+    mockMatchMedia(false)
+    let update: (() => Promise<void> | void) | undefined
+    doc.startViewTransition = vi.fn((cb: () => Promise<void> | void) => {
+      update = cb
+      return { ready: Promise.resolve() }
+    })
+    const navigate = vi.fn()
+    navigateWithTransition(navigate, -1)
+    expect(navigate).not.toHaveBeenCalled()
+    await update?.()
+    expect(navigate).toHaveBeenCalledWith(-1)
+  })
+})
+
+describe('meterStyle', () => {
+  it('clamps the percentage to the track', () => {
+    expect(meterStyle(40)).toEqual({ '--p': 0.4 })
+    expect(meterStyle(140)).toEqual({ '--p': 1 })
+    expect(meterStyle(-5)).toEqual({ '--p': 0 })
   })
 })

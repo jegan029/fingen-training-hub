@@ -7,6 +7,7 @@ import RoadmapCanvas from '../components/roadmap/RoadmapCanvas'
 import RoadmapList from '../components/roadmap/RoadmapList'
 import NodeDrawer from '../components/roadmap/NodeDrawer'
 import Legend from '../components/roadmap/Legend'
+import { meterStyle } from '../lib/motion'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import styles from './ModuleView.module.css'
 
@@ -97,7 +98,7 @@ export default function ModuleView() {
             aria-valuemax={100}
             aria-valuenow={pct}
           >
-            <div className={styles.fill} style={{ width: `${pct}%` }} />
+            <div className={styles.fill} style={meterStyle(pct)} />
           </div>
           <ul className={styles.counters} aria-label="Status counts">
             <li>

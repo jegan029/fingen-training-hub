@@ -466,6 +466,7 @@
 }
 
 .fill {
+  composes: meter from '../styles/motion.module.css';
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--color-accent);

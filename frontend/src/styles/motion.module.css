@@ -1,0 +1,101 @@
+/*
+ * Shared motion. Use a class directly, or compose it into a module class:
+ *   .card { composes: rise from '../styles/motion.module.css'; }
+ * Set --i on an element (see staggerStyle in lib/motion.ts) to delay it by --i steps of --stagger-step.
+ * Every animation ends in the normal, visible state, and reduced motion shows that state straight away.
+ */
+
+.fadeIn {
+  animation: fadeIn var(--motion-base) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+}
+
+.rise {
+  animation: rise var(--motion-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+}
+
+/* Something arrived or finished: a check, a score, a badge. */
+.pop {
+  animation: pop var(--motion-slow) var(--ease-emphasis) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step));
+}
+
+/* Loading placeholder: a sheen sweeps across with transform only, no repaint of the block itself. */
+.sheen {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface-2);
+}
+
+.sheen::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-surface) 70%, transparent) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: sheen 1.4s var(--ease-in-out) infinite;
+}
+
+/*
+ * Progress fill inside a track with overflow: hidden. Set --p (0 to 1) with meterStyle(pct).
+ * It slides in from the left when first shown, then follows changes; the rounded end stays round.
+ */
+.meter {
+  display: block;
+  width: 100%;
+  transform: translateX(calc((var(--p, 0) - 1) * 100%));
+  transition: transform var(--motion-slow) var(--ease-out);
+  animation: meterIn var(--motion-draw) var(--ease-out) both;
+}
+
+@keyframes meterIn {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+@keyframes sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fadeIn,
+  .rise,
+  .pop,
+  .meter {
+    animation: none;
+    transition: none;
+  }
+
+  .sheen::after {
+    display: none;
+  }
+}

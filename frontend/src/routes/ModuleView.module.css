@@ -60,10 +60,10 @@
 }
 
 .fill {
+  composes: meter from '../styles/motion.module.css';
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--color-accent);
-  transition: width var(--duration-slow) var(--ease-out);
 }
 
 .counters {
@@ -118,12 +118,5 @@
   width: 240px;
   height: 52px;
   border-radius: var(--radius-md);
-  background: var(--color-surface-2);
-  animation: pulse 1.2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.5;
-  }
+  composes: sheen from '../styles/motion.module.css';
 }

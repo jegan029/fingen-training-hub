@@ -4,6 +4,7 @@ import { fetchAnalytics, fetchRoadmaps } from '../api'
 import type { AnalyticsSummary, LearningPath } from '../types'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
+import { meterStyle } from '../lib/motion'
 import page from '../styles/page.module.css'
 import styles from './AnalyticsDashboard.module.css'
 
@@ -119,7 +120,7 @@ export default function AnalyticsDashboard() {
               aria-valuemax={100}
               aria-valuenow={pct}
             >
-              <span className={`${page.fill} ${pct >= 70 ? page.fillSuccess : ''}`} style={{ width: `${pct}%` }} />
+              <span className={`${page.fill} ${pct >= 70 ? page.fillSuccess : ''}`} style={meterStyle(pct)} />
             </span>
             <p className={styles.barNote}>
               {pct}% of all topics in this path are done across {analytics.learners} learners.

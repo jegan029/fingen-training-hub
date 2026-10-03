@@ -208,3 +208,36 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 2. Real instance: `scripts/servicenow_probe.py` and the client are ready; not verified, because no instance was available. Use a developer instance as described in the docs.
 3. Classification enforced server side on every path, including search, runbooks, downloads and the AI Tutor. Done, with tests and mutation checks.
 4. No secrets, real KB content or client identifiers committed; all tests and checks pass; documentation updated. Done.
+
+## Motion and graphics pass (branch `feature/motion`, stacked on `feature/servicenow-knowledge`)
+Plan approved 2026-10-03: CSS plus View Transitions (no animation library), drawer title to lesson heading as the shared element, transform and opacity only (progress ring stroke is the one paint only exception).
+
+### Phase A: Motion foundation
+- [x] Motion tokens in `tokens.css` (durations, easings, stagger; old `--duration-*` names alias them)
+- [x] `styles/motion.module.css`: fadeIn, rise, pop, sheen skeleton, transform only `.meter` progress fill; static under reduced motion
+- [x] Skeletons use the sheen (pulse keyframes removed from three modules); progress bars move from `width` to `translateX`
+- [x] `lib/motion.ts`: `usePrefersReducedMotion`, `staggerStyle`, `meterStyle`, `navigateWithTransition`; `components/TransitionLink.tsx`
+- [x] Page transitions: root cross fade with a small rise, topbar held still; topbar and footer links use `TransitionLink`
+- [x] Empty and error states rise in once
+
+### Phase B: Roadmap
+- [ ] Connectors draw in (transform only curtain), nodes arrive in step; distinct locked, available, in progress, done treatment
+- [ ] Completion moment: connector to the next topic lights up, newly unlocked topics change, live region announcement; list view too
+
+### Phase C: Path list
+- [ ] Staggered cards, progress ring counting up, hover and focus depth, ambient lattice showing overall progress
+
+### Phase D: Lesson page
+- [ ] Drawer title morphs into the lesson heading; lesson sections reveal on scroll
+
+### Phase E: Assessment
+- [ ] Result shaped evaluating skeleton; staged result reveal
+
+### Phase F: Chat
+- [ ] Typing indicator, message entrance, citation chips from `source_node_ids` and `source_article_id`
+
+### Phase G: Analytics
+- [ ] Onboarding at a glance hero, stat tickers, animated per path chart with a data table
+
+### Phase H: Finish
+- [ ] Tests, batched visual check (1440 and 390, both themes, reduced motion), detector, finish review, DESIGN.md, docs, PR

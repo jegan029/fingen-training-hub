@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Route, Routes, Link, useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { Route, Routes, useLocation, useNavigate, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 // The login and home pages are the usual entry points, so they ship in the main bundle; the rest load on demand.
 import LoginPage from './routes/LoginPage'
@@ -8,6 +8,7 @@ import Logo from './components/Logo'
 import ThemeToggle from './components/ThemeToggle'
 import CommandPalette from './components/CommandPalette'
 import ErrorBoundary from './components/ErrorBoundary'
+import TransitionLink from './components/TransitionLink'
 import Skeleton from './components/ui/Skeleton'
 import page from './styles/page.module.css'
 import styles from './App.module.css'
@@ -66,37 +67,37 @@ function Topbar() {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <Link to="/" className={`brand ${styles.brand}`}>
+        <TransitionLink to="/" className={`brand ${styles.brand}`}>
           <Logo size={30} />
-        </Link>
+        </TransitionLink>
         <nav className="topnav" aria-label="Main">
-          <Link to="/roadmaps" className={active('/roadmaps')}>
+          <TransitionLink to="/roadmaps" className={active('/roadmaps')}>
             Training Paths
-          </Link>
-          <Link to="/runbooks" className={active('/runbooks')}>
+          </TransitionLink>
+          <TransitionLink to="/runbooks" className={active('/runbooks')}>
             Runbooks
-          </Link>
-          <Link
+          </TransitionLink>
+          <TransitionLink
             to="/knowledge"
             className={pathname.startsWith('/knowledge') || pathname.startsWith('/applications') ? 'active' : ''}
           >
             Knowledge
-          </Link>
-          <Link to="/chat" className={active('/chat')}>
+          </TransitionLink>
+          <TransitionLink to="/chat" className={active('/chat')}>
             AI Tutor
-          </Link>
+          </TransitionLink>
           {isAdmin && (
-            <Link to="/analytics/1" className={pathname.startsWith('/analytics') ? 'active' : ''}>
+            <TransitionLink to="/analytics/1" className={pathname.startsWith('/analytics') ? 'active' : ''}>
               Analytics
-            </Link>
+            </TransitionLink>
           )}
-          <Link to="/certificate" className={active('/certificate')}>
+          <TransitionLink to="/certificate" className={active('/certificate')}>
             Certificate
-          </Link>
+          </TransitionLink>
           {isAdmin && (
-            <Link to="/admin" className={`${active('/admin')} nav-admin`}>
+            <TransitionLink to="/admin" className={`${active('/admin')} nav-admin`}>
               Admin
-            </Link>
+            </TransitionLink>
           )}
         </nav>
         <div className={styles.tools}>
@@ -128,14 +129,14 @@ function Footer() {
           <p className="ss-footer-tagline">L2 Support Engineer Training Hub</p>
         </div>
         <div className="ss-footer-links">
-          <Link to="/roadmaps">Training Paths</Link>
-          <Link to="/chat">AI Tutor</Link>
-          <Link to="/analytics/1">Analytics</Link>
-          <Link to="/runbooks">Runbooks</Link>
-          <Link to="/knowledge">Knowledge Library</Link>
-          <Link to="/applications">Applications</Link>
-          <Link to="/admin">Admin</Link>
-          <Link to="/credits">Image credits</Link>
+          <TransitionLink to="/roadmaps">Training Paths</TransitionLink>
+          <TransitionLink to="/chat">AI Tutor</TransitionLink>
+          <TransitionLink to="/analytics/1">Analytics</TransitionLink>
+          <TransitionLink to="/runbooks">Runbooks</TransitionLink>
+          <TransitionLink to="/knowledge">Knowledge Library</TransitionLink>
+          <TransitionLink to="/applications">Applications</TransitionLink>
+          <TransitionLink to="/admin">Admin</TransitionLink>
+          <TransitionLink to="/credits">Image credits</TransitionLink>
         </div>
         <p className="ss-footer-copy">
           FinGen Training Hub.

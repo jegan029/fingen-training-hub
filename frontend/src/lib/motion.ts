@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { flushSync } from 'react-dom'
+import type { NavigateFunction, NavigateOptions, To } from 'react-router-dom'
+import { useMediaQuery } from './useMediaQuery'
 
 export function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -52,4 +55,68 @@ export function useCountUp(target: number, active: boolean, durationMs = 700): n
   }, [target, active, instant, durationMs])
 
   return instant ? target : value
+}
+
+/** Live reduced motion preference, for components that render a different static state. */
+export function usePrefersReducedMotion(): boolean {
+  return useMediaQuery('(prefers-reduced-motion: reduce)')
+}
+
+/** Stagger index for the shared motion classes: the element waits --i steps of --stagger-step. */
+export function staggerStyle(index: number): CSSProperties {
+  return { '--i': index } as CSSProperties
+}
+
+/** Position of a `.meter` progress fill, from a 0 to 100 percentage. */
+export function meterStyle(pct: number): CSSProperties {
+  return { '--p': Math.max(0, Math.min(100, pct)) / 100 } as CSSProperties
+}
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (update: () => Promise<void> | void) => { ready: Promise<void> }
+}
+
+export interface TransitionOptions extends NavigateOptions {
+  /** CSS selector of an element the new page must show before the transition animates (a shared title). */
+  waitFor?: string
+}
+
+// How long a transition may hold the old page while the new one renders its shared element.
+const WAIT_LIMIT_MS = 300
+
+function waitForElement(selector: string, limitMs: number): Promise<void> {
+  const start = performance.now()
+  return new Promise((resolve) => {
+    const check = () => {
+      if (document.querySelector(selector) || performance.now() - start > limitMs) resolve()
+      else requestAnimationFrame(check)
+    }
+    check()
+  })
+}
+
+/**
+ * Navigates inside a View Transition, so the page cross fades and elements that share a
+ * view-transition-name morph between pages. Navigates instantly where the API is missing
+ * (older browsers, tests) or the user prefers reduced motion.
+ */
+export function navigateWithTransition(
+  navigate: NavigateFunction,
+  to: To | number,
+  { waitFor, ...options }: TransitionOptions = {},
+) {
+  const go = () => (typeof to === 'number' ? navigate(to) : navigate(to, options))
+  const doc = document as ViewTransitionDocument
+  if (typeof doc.startViewTransition !== 'function' || prefersReducedMotion()) {
+    go()
+    return
+  }
+  const transition = doc.startViewTransition(async () => {
+    flushSync(() => {
+      go()
+    })
+    if (waitFor) await waitForElement(waitFor, WAIT_LIMIT_MS)
+  })
+  // A skipped transition (for example a second click) still navigates; nothing to report.
+  transition.ready.catch(() => {})
 }
