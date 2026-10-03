@@ -242,7 +242,9 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - [x] Scenario quiz: verdict panel rises, its icon pops, the answer review and explanation follow in order
 
 ### Phase F: Chat
-- [ ] Typing indicator, message entrance, citation chips from `source_node_ids` and `source_article_id`
+- [x] `ui/TypingIndicator` (bobbing dots, "AI Tutor is typing" for screen readers, static under reduced motion) replaces "Thinking…"
+- [x] Sent messages slide in from the reading end, replies rise, a long reply's paragraphs follow 40 ms apart (all text present from the first frame)
+- [x] Source chips fade in after the reply. Path mode: the path the tutor answered from plus the topics the answer names (`pathSources`; the API lists every topic in the path, which is not a citation). Article mode: the KB article
 
 ### Phase G: Analytics
 - [ ] Onboarding at a glance hero, stat tickers, animated per path chart with a data table

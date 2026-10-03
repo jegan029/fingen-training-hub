@@ -16,6 +16,12 @@
   animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
 }
 
+/* Arrives from the reading end, like a message you just sent. */
+.fromEnd {
+  animation: fromEnd var(--motion-base) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * var(--stagger-step) + var(--delay, 0ms));
+}
+
 /* Something arrived or finished: a check, a score, a badge. */
 .pop {
   animation: pop var(--motion-slow) var(--ease-emphasis) backwards;
@@ -74,6 +80,13 @@
   }
 }
 
+@keyframes fromEnd {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
 @keyframes pop {
   from {
     opacity: 0;
@@ -90,6 +103,7 @@
 @media (prefers-reduced-motion: reduce) {
   .fadeIn,
   .rise,
+  .fromEnd,
   .pop,
   .meter {
     animation: none;

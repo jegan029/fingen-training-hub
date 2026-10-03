@@ -71,12 +71,14 @@
 }
 
 .user {
+  composes: fromEnd from '../styles/motion.module.css';
   align-self: flex-end;
   background: var(--color-accent);
   color: var(--color-accent-contrast);
 }
 
 .bot {
+  composes: rise from '../styles/motion.module.css';
   align-self: flex-start;
   border: 1px solid var(--color-border);
   background: var(--color-surface-2);
@@ -94,9 +96,68 @@
   white-space: pre-wrap;
 }
 
-.thinking {
-  margin: 0;
-  color: var(--color-text-muted);
+/* A long reply arrives paragraph by paragraph; every word is in the DOM from the first frame. */
+.reply > * {
+  animation: rise var(--motion-slow) var(--ease-out) backwards;
+}
+.reply > :nth-child(2) {
+  animation-delay: 40ms;
+}
+.reply > :nth-child(3) {
+  animation-delay: 80ms;
+}
+.reply > :nth-child(4) {
+  animation-delay: 120ms;
+}
+.reply > :nth-child(n + 5) {
+  animation-delay: 160ms;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Sources fade in once the answer has landed. */
+.sources {
+  composes: fadeIn from '../styles/motion.module.css';
+  --delay: var(--motion-slow);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: 600 var(--text-xs) / 1.6 var(--font-sans);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: border-color var(--motion-fast) var(--ease-out);
+}
+
+.source:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reply > * {
+    animation: none;
+  }
 }
 
 .inputRow {

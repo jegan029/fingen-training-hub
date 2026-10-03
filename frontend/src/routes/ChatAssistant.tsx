@@ -1,15 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { BookOpen, Bot, Send } from 'lucide-react'
-import { fetchRoadmaps, chatQuery, chatAboutArticle, fetchArticle } from '../api'
-import type { ArticleDetail, LearningPath } from '../types'
+import { fetchRoadmaps, chatQuery, chatAboutArticle, fetchArticle, fetchRoadmapNodes } from '../api'
+import type { ArticleDetail, LearningPath, NodeSummary } from '../types'
 import Markdown from '../components/Markdown'
+import TypingIndicator from '../components/ui/TypingIndicator'
+import { pathSources, type ChatSource } from '../lib/chatSources'
 import page from '../styles/page.module.css'
 import styles from './ChatAssistant.module.css'
 
 interface Message {
   role: 'user' | 'bot'
   text: string
+  /** Where a reply came from, shown as chips under it. */
+  sources?: ChatSource[]
 }
 
 const MAX_MESSAGE = 2000
@@ -27,12 +31,21 @@ export default function ChatAssistant() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  // Topics of the selected path, to name the ones an answer refers to.
+  const [pathNodes, setPathNodes] = useState<{ pathId: string; nodes: NodeSummary[] } | null>(null)
 
   useEffect(() => {
     fetchRoadmaps()
       .then(setPaths)
       .catch(() => setError('Could not load training paths'))
   }, [])
+
+  useEffect(() => {
+    if (articleId) return
+    fetchRoadmapNodes(Number(pathId))
+      .then((nodes) => setPathNodes({ pathId, nodes }))
+      .catch(() => {})
+  }, [articleId, pathId])
 
   useEffect(() => {
     if (!articleId) return
@@ -71,7 +84,15 @@ export default function ChatAssistant() {
     setLoading(true)
     try {
       const res = articleId ? await chatAboutArticle(articleId, text) : await chatQuery(Number(pathId), text)
-      setMessages((prev) => [...prev, { role: 'bot', text: res.answer }])
+      const path = paths.find((p) => String(p.id) === pathId) ?? null
+      const nodes = pathNodes?.pathId === pathId ? pathNodes.nodes : []
+      const sources =
+        articleId && current && res.source_article_id === current.id
+          ? [{ label: `${current.kb_number}: ${current.title}`, to: `/knowledge/${current.id}` }]
+          : articleId
+            ? []
+            : pathSources(res.answer, path, nodes, res.source_node_ids)
+      setMessages((prev) => [...prev, { role: 'bot', text: res.answer, sources }])
     } catch (err) {
       setError((err as Error).message || 'Request failed')
     } finally {
@@ -157,16 +178,27 @@ export default function ChatAssistant() {
             <div key={i} className={`${styles.msg} ${m.role === 'user' ? styles.user : styles.bot}`}>
               <p className={styles.msgLabel}>{m.role === 'user' ? 'You' : 'AI Tutor'}</p>
               {m.role === 'bot' ? (
-                <Markdown className="md-chat">{m.text}</Markdown>
+                <Markdown className={`md-chat ${styles.reply}`}>{m.text}</Markdown>
               ) : (
                 <p className={styles.userText}>{m.text}</p>
+              )}
+              {m.sources && m.sources.length > 0 && (
+                <ul className={styles.sources} aria-label="Sources">
+                  {m.sources.map((src) => (
+                    <li key={src.to}>
+                      <Link className={styles.source} to={src.to}>
+                        {src.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           ))}
           {loading && (
             <div className={`${styles.msg} ${styles.bot}`}>
               <p className={styles.msgLabel}>AI Tutor</p>
-              <p className={styles.thinking}>Thinking…</p>
+              <TypingIndicator label="AI Tutor is typing" />
             </div>
           )}
           <div ref={bottomRef} />
