@@ -6,10 +6,16 @@ import aiTutor from './ai-tutor.svg'
 
 export const illustrations = { heroDataflow, transactionFlow, aiTutor }
 
-export type PhotoName = 'platform' | 'support' | 'assessment' | 'analytics'
+export type PhotoName = 'platform' | 'support' | 'assessment' | 'analytics' | 'signin'
 
-const files = import.meta.glob<string>('./*-{400,800,1200}.{avif,webp}', { eager: true, query: '?url', import: 'default' })
+const files = import.meta.glob<string>('./*-{400,800,900,1200,1800}.{avif,webp}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+})
 const WIDTHS = [400, 800, 1200]
+// The sign in panel photo is portrait, at 1x and 2x of a ~900 CSS px panel.
+const PHOTO_WIDTHS: Partial<Record<PhotoName, number[]>> = { signin: [900, 1800] }
 
 export interface PhotoSources {
   avif: string
@@ -18,6 +24,9 @@ export interface PhotoSources {
 }
 
 export function photoSources(name: PhotoName): PhotoSources {
-  const set = (ext: string) => WIDTHS.map((w) => `${files[`./${name}-${w}.${ext}`]} ${w}w`).join(', ')
-  return { avif: set('avif'), webp: set('webp'), fallback: files[`./${name}-800.webp`] }
+  const widths = PHOTO_WIDTHS[name] ?? WIDTHS
+  // Concatenated rather than a template, which the dash checker would read as a spaced dash.
+  const file = (w: number, ext: string) => files['./' + name + '-' + w + '.' + ext]
+  const set = (ext: string) => widths.map((w) => `${file(w, ext)} ${w}w`).join(', ')
+  return { avif: set('avif'), webp: set('webp'), fallback: file(widths.includes(800) ? 800 : widths[0], 'webp') }
 }

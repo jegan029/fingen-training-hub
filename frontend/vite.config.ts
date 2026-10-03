@@ -1,5 +1,6 @@
 import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import pkg from './package.json' with { type: 'json' }
 
 // Content Security Policy for the production build. The dev server is excluded because
 // Vite injects an inline script for hot reload there.
@@ -30,6 +31,8 @@ const API_TARGET = process.env.API_PROXY_TARGET || 'http://localhost:8000'
 
 export default defineConfig({
   plugins: [react()],
+  // Shown in the sign in page's small print.
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   build: {
     // Emit every asset as a file (no data: URIs) so the CSP can stay self only.
     assetsInlineLimit: 0,

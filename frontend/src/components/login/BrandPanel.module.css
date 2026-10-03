@@ -1,0 +1,185 @@
+/* Copy column over the scene. Text sits on the darkest part of the overlay (left), at 4.5:1 or better. */
+.panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-5);
+  height: 100%;
+  padding: clamp(var(--space-5), 4.5vw, var(--space-8));
+  color: var(--scene-text);
+  font-family: var(--font-sans);
+}
+
+.story {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: 34rem;
+}
+
+.headline {
+  margin: 0;
+  max-width: 13ch;
+  font: 900 clamp(2.25rem, 3.7vw, 3.9rem) / 1.04 var(--font-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--scene-text);
+}
+
+.lead {
+  margin: 0;
+  max-width: 36ch;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--scene-text-muted);
+  text-wrap: pretty;
+}
+
+.more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-3);
+}
+
+.values {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.values li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.valueIcon {
+  flex-shrink: 0;
+  color: var(--scene-star);
+}
+
+/* Numbers in the headline's voice: serif, tabular so counting does not shimmy. */
+.stats {
+  display: flex;
+  min-height: 2rem;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  color: var(--scene-text-muted);
+  font-size: var(--text-sm);
+}
+
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.statValue {
+  font: 700 2rem / 1 var(--font-display);
+  font-variant-numeric: tabular-nums;
+  color: var(--scene-text);
+}
+
+.tip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--scene-star) 28%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--scene-night) 62%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.tipIcon {
+  margin-top: 2px;
+  color: var(--scene-lit);
+}
+
+.tipText {
+  margin: 0;
+  /* Room for the longest tip, so changing tips never moves the footer. */
+  min-height: calc(3 * 1.5em);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--scene-text);
+}
+
+.tipText p {
+  margin: 0;
+}
+
+.tipControl {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--scene-star) 40%, transparent);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--scene-text);
+  cursor: pointer;
+}
+
+.tipControl:hover {
+  border-color: var(--scene-text);
+}
+
+.tipControl:focus-visible {
+  outline: 3px solid var(--scene-text);
+  outline-offset: 2px;
+}
+
+.footer {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--scene-text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Tablet band and phones: logo and headline only. */
+@media (max-width: 1023px) {
+  .more,
+  .lead,
+  .footer {
+    display: none;
+  }
+
+  .panel {
+    justify-content: flex-start;
+    padding-bottom: var(--space-8);
+  }
+}
+
+/* Short desktop windows keep the no scroll rule by dropping the tip. */
+@media (min-width: 1024px) and (max-height: 760px) {
+  .tipWrap {
+    display: none;
+  }
+}
+
+/* Phones: the card stands alone; only the logo stays above it. */
+@media (max-width: 767px) {
+  .story {
+    display: none;
+  }
+}

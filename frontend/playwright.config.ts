@@ -56,6 +56,8 @@ export default defineConfig({
         SEED_ADMIN_PASSWORD: E2E_ADMIN.password,
         SEED_LEARNER_PASSWORD: E2E_LEARNER.password,
         LLM_PROVIDER: 'offline',
+        // The suite signs in from one address more than the production limit of 5 a minute allows.
+        LOGIN_RATE_LIMIT: '30/minute',
         // ServiceNow in mock mode (synthetic fixtures, no network). No schedule: the admin test syncs.
         SERVICENOW_ENABLED: 'true',
         SERVICENOW_MOCK_MODE: 'true',

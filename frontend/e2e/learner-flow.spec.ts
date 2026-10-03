@@ -4,7 +4,7 @@ import { E2E_LEARNER } from './accounts'
 test('learner signs in, opens a path, marks a topic done and sees progress update', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('Email address').fill(E2E_LEARNER.email)
-  await page.getByLabel('Password').fill(E2E_LEARNER.password)
+  await page.getByLabel('Password', { exact: true }).fill(E2E_LEARNER.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL('/')
 
@@ -60,7 +60,7 @@ test('learner signs in, opens a path, marks a topic done and sees progress updat
 test('Ctrl+K search opens a runbook', async ({ page }) => {
   await page.goto('/login')
   await page.getByLabel('Email address').fill(E2E_LEARNER.email)
-  await page.getByLabel('Password').fill(E2E_LEARNER.password)
+  await page.getByLabel('Password', { exact: true }).fill(E2E_LEARNER.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL('/')
 

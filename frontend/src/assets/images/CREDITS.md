@@ -9,6 +9,7 @@ All images are self-hosted. Photos were cropped, resized and converted to AVIF a
 | `support-*.avif/webp` | L2 Support Operations card | [Pexels photo 12902877](https://www.pexels.com/photo/office-worker-using-a-laptop-with-his-colleague-standing-behind-and-pointing-at-the-screen-12902877/) | Mizuno K | [Pexels License](https://www.pexels.com/license/) |
 | `assessment-*.avif/webp` | Assessments card | [Pexels photo 1181343](https://www.pexels.com/photo/man-wearing-blue-dress-shirt-facing-whiteboard-1181343/) | Christina Morillo | [Pexels License](https://www.pexels.com/license/) |
 | `analytics-*.avif/webp` | Analytics card | [Pexels photo 577210](https://www.pexels.com/photo/close-up-photo-of-gray-laptop-577210/) | Lukas Blazek | [Pexels License](https://www.pexels.com/license/) |
+| `signin-*.avif/webp` | Sign in page brand panel | [Pexels photo 39071423](https://www.pexels.com/photo/woman-in-control-room-monitoring-screens-39071423/) | Caleb Oquendo | [Pexels License](https://www.pexels.com/license/) |
 | `hero-dataflow.svg` | Home page hero artwork | Original illustration for this project | FinGen Training Hub | Project licence |
 | `transaction-flow.svg` | Transaction and Data Flows card | Original illustration for this project | FinGen Training Hub | Project licence |
 | `ai-tutor.svg` | AI Tutor card | Original illustration for this project | FinGen Training Hub | Project licence |

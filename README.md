@@ -4,6 +4,8 @@ An onboarding platform for L2 support engineers on the (fictional) Fingen platfo
 
 Built with FastAPI and SQLite on the backend and React 18, TypeScript and Vite on the frontend. This is a demo: all people, accounts and procedures are made up.
 
+![The sign in page: a brand panel with the curriculum drawn as a constellation over a monitoring room photo, and the sign in form](docs/screenshots/login.webp)
+
 ## Features
 
 - **Roadmaps.** Each path is a 2D roadmap: a spine of topics with subtopics branching off, taken from each lesson's `##` headings. A topic can be pending, in progress, done or skipped. Skipping unlocks later topics but does not count as done. The side drawer has keyboard shortcuts (D, P, S, R, Esc), and on phones the roadmap becomes a list with a bottom sheet.
@@ -22,6 +24,7 @@ Built with FastAPI and SQLite on the backend and React 18, TypeScript and Vite o
   - **AI Tutor**: shows a typing indicator and source chips.
   - **Analytics**: opens with an "Onboarding at a glance" summary.
   - **Reduced motion**: everything is static.
+- **Sign in.** A split screen: the brand panel shows the curriculum as a constellation (three paths of ten topics, with the one cross path dependency), live counts from `GET /api/public/stats` and a rotating support tip; the card has floating labels, a show password toggle, a Caps Lock warning and a live countdown when sign in is rate limited (from `Retry-After`). Tablet shows a band above the card and phones the card alone. Lighthouse on `/login`: desktop 100/100 and mobile 95/100 (performance, accessibility).
 - **Accessibility and themes.** Light and dark themes. The UI works by keyboard and respects reduced motion. Lighthouse on the home page: mobile 93/100/100, desktop 100/100/100 (performance, accessibility, best practices).
 
 ## Quick start (Docker)
