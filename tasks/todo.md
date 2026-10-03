@@ -233,7 +233,8 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - [x] `ProgressLattice` header graphic: one dotted track per path lit up to the topics done (hidden from assistive technology, dropped below 720 px)
 
 ### Phase D: Lesson page
-- [ ] Drawer title morphs into the lesson heading; lesson sections reveal on scroll
+- [x] "Read full lesson" runs a View Transition: the drawer title and the lesson heading share a `view-transition-name` (`sharedTitle`), the title is passed in router state so the heading exists before the lesson loads, and the drawer preloads the lesson chunk; Back reverses it when the roadmap renders in time (otherwise a plain cross fade)
+- [x] Lesson sections (`splitSections`, fence aware, tested) rise in as they scroll into view; sections already on screen are left alone, print and find in page unaffected
 
 ### Phase E: Assessment
 - [ ] Result shaped evaluating skeleton; staged result reveal

@@ -120,3 +120,15 @@ export function navigateWithTransition(
   // A skipped transition (for example a second click) still navigates; nothing to report.
   transition.ready.catch(() => {})
 }
+
+/**
+ * A topic title shared between the roadmap drawer and the lesson page: both carry the same
+ * view-transition-name, so the title morphs from one into the other during the page transition.
+ */
+export function sharedTitle(nodeId: number) {
+  const name = `node-title-${nodeId}`
+  return {
+    selector: `[data-shared-title="${name}"]`,
+    props: { 'data-shared-title': name, style: { viewTransitionName: name } as CSSProperties },
+  }
+}

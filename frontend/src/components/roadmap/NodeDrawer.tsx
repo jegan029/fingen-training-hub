@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { BookOpen, ClipboardCheck, Lock, MessageSquare, Target, X, FileText } from 'lucide-react'
 import type { NodeStatus, NodeSummary } from '../../types'
+import TransitionLink from '../TransitionLink'
+import { sharedTitle } from '../../lib/motion'
 import NodeArticles from './NodeArticles'
 import { STATUS_META, STATUS_ORDER, StatusIcon, statusForKey } from './status'
 import styles from './NodeDrawer.module.css'
@@ -35,6 +37,13 @@ export default function NodeDrawer({
   useEffect(() => {
     closeButton.current?.focus()
   }, [node.id])
+
+  // Load the lesson page's code now, so "Read full lesson" can morph the title straight into its heading.
+  useEffect(() => {
+    import('../../routes/NodeContentPage').catch(() => {})
+  }, [])
+
+  const title = sharedTitle(node.id)
 
   const canSet = (status: NodeStatus) => !node.locked || status === 'pending'
 
@@ -82,7 +91,7 @@ export default function NodeDrawer({
         onKeyDown={onKeyDown}
       >
         <header className={styles.header}>
-          <h2 id="drawer-title" className={styles.title}>
+          <h2 id="drawer-title" className={styles.title} {...title.props}>
             {node.title}
           </h2>
           <button ref={closeButton} type="button" className={styles.close} onClick={onClose} aria-label="Close">
@@ -138,10 +147,15 @@ export default function NodeDrawer({
         <p className={styles.summary}>{node.description}</p>
 
         <nav className={styles.actions} aria-label="Topic actions">
-          <Link className={styles.primary} to={`/learn/${node.id}`}>
+          <TransitionLink
+            className={styles.primary}
+            to={`/learn/${node.id}`}
+            state={{ title: node.title }}
+            waitFor={title.selector}
+          >
             <BookOpen size={16} aria-hidden="true" />
             Read full lesson
-          </Link>
+          </TransitionLink>
           <Link className={styles.secondary} to={`/assessment/${node.id}`}>
             <ClipboardCheck size={16} aria-hidden="true" />
             Take assessment

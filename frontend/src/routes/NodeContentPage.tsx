@@ -4,6 +4,9 @@ import { ArrowLeft, Check, ClipboardCheck, Target } from 'lucide-react'
 import { fetchNodeDetail, completeNode } from '../api'
 import type { NodeDetail } from '../types'
 import Markdown from '../components/Markdown'
+import Reveal from '../components/Reveal'
+import { navigateWithTransition, sharedTitle } from '../lib/motion'
+import { splitSections } from '../lib/markdownSections'
 import Skeleton from '../components/ui/Skeleton'
 import StateMessage from '../components/ui/StateMessage'
 import page from '../styles/page.module.css'
@@ -29,8 +32,15 @@ export default function NodeContentPage() {
       .finally(() => setLoading(false))
   }, [nodeId])
 
+  // The roadmap drawer passes the title along, so the heading is there for the title morph before the lesson loads.
+  const passedTitle = (location.state as { title?: string } | null)?.title
+  const title = sharedTitle(Number(nodeId))
+
   // Opened from a bookmark there is no in-app history, so "back" goes to the paths list.
-  const goBack = () => (location.key === 'default' ? navigate('/roadmaps') : navigate(-1))
+  const goBack = () =>
+    location.key === 'default'
+      ? navigate('/roadmaps')
+      : navigateWithTransition(navigate, -1, { waitFor: title.selector })
 
   const handleMarkDone = async () => {
     if (!node) return
@@ -49,7 +59,13 @@ export default function NodeContentPage() {
   if (loading) {
     return (
       <div className={`${page.page} ${page.narrow}`}>
-        <Skeleton height={36} width="55%" label="Loading lesson" />
+        {passedTitle ? (
+          <h1 className={page.title} {...title.props}>
+            {passedTitle}
+          </h1>
+        ) : (
+          <Skeleton height={36} width="55%" label="Loading lesson" />
+        )}
         <div className={styles.skeletonBody}>
           <Skeleton lines={8} height={18} label="Loading lesson" />
         </div>
@@ -85,7 +101,9 @@ export default function NodeContentPage() {
         </button>
         <div className={styles.titleRow}>
           <div>
-            <h1 className={page.title}>{node.title}</h1>
+            <h1 className={page.title} {...title.props}>
+              {node.title}
+            </h1>
             <p className={page.lead}>{node.description}</p>
           </div>
           <div className={styles.headerActions}>
@@ -125,7 +143,12 @@ export default function NodeContentPage() {
       </header>
 
       <article className={styles.content}>
-        <Markdown className="md-lesson">{node.content}</Markdown>
+        {/* Each section rises in as it scrolls into view. */}
+        {splitSections(node.content).map((section, i) => (
+          <Reveal key={i} className={styles.section}>
+            <Markdown className="md-lesson">{section}</Markdown>
+          </Reveal>
+        ))}
       </article>
 
       {node.sample_question && (
