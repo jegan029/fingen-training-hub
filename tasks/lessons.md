@@ -16,3 +16,5 @@
 - `ruff format` can move a trailing `# gitleaks:allow` off the flagged line; put test secrets in their own short assignment.
 - Do not apply code edits through Python heredoc scripts when the replaced text has backslash escapes (`\n`, `\`) or non-ASCII characters: the escaping changes between bash, Python and the file, or Windows reads the script as cp1252, and the edit silently fails or writes real newlines. Use the Edit tool for those.
 - When a test inspects an LLM prompt, record the system prompt and the user prompt separately: the system prompt names the delimiter tags, so counting or splitting on tags over both gives false failures.
+- When a scripted multi file edit fails part way, check which files actually changed before running tests: a Playwright run passed while its config edit had not applied, only because development defaults happened to match. Passing for the wrong reason hides flakiness (here, a scheduler racing the test).
+- Screen reader only text after visible text needs an explicit `{' '}` before the hidden span; a space inside the span is dropped from the accessible name ("Downloadposting-flow.pdf"). Assert link names in tests.

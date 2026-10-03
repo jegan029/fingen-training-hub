@@ -106,8 +106,8 @@ export default function KnowledgeArticle() {
         )}
         {a.source_url && (
           <a href={a.source_url} target="_blank" rel="noopener noreferrer" className={page.btn}>
-            <ExternalLink size={16} aria-hidden="true" /> View in ServiceNow
-            <span className={page.srOnly}> (opens in a new tab)</span>
+            <ExternalLink size={16} aria-hidden="true" /> View in ServiceNow{' '}
+            <span className={page.srOnly}>(opens in a new tab)</span>
           </a>
         )}
       </div>
@@ -184,8 +184,8 @@ export default function KnowledgeArticle() {
                       <span className={styles.docSize}>{formatBytes(d.size_bytes)}</span>
                     </span>
                     <a href={documentDownloadUrl(d.id)} download className={`${page.btn} ${page.btnSm}`}>
-                      <Download size={14} aria-hidden="true" /> Download
-                      <span className={page.srOnly}> {d.file_name}</span>
+                      <Download size={14} aria-hidden="true" /> Download{' '}
+                      <span className={page.srOnly}>{d.file_name}</span>
                     </a>
                   </li>
                 ))}

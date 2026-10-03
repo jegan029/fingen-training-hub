@@ -30,8 +30,7 @@ function MarkdownLink({ href = '', children, node: _node, ...rest }: ComponentPr
   }
   return (
     <a href={href} target="_blank" rel="noopener noreferrer" {...rest}>
-      {children}
-      <span className={page.srOnly}> (opens in a new tab)</span>
+      {children} <span className={page.srOnly}>(opens in a new tab)</span>
     </a>
   )
 }

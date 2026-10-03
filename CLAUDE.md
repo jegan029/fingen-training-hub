@@ -73,8 +73,11 @@ cd frontend && npm run test:e2e
 
 # Content and security
 python scripts/check_no_dashes.py --list                # also runs inside pytest
-cd backend && .venv/Scripts/pip-audit -r requirements.txt && .venv/Scripts/bandit -r app -q
+cd backend && .venv/Scripts/pip-audit -r requirements.txt && .venv/Scripts/bandit -r app ../scripts/servicenow_probe.py -q
 cd frontend && npm audit --audit-level=high
+
+# ServiceNow mapping check (mock mode in development; prints no secrets or article text)
+backend/.venv/Scripts/python scripts/servicenow_probe.py --limit 3
 ```
 
 Formatting-only changes go in their own commit. Home page photos are regenerated with `cd frontend && node scripts/optimize-images.mjs <folder of source JPEGs>`.
@@ -94,7 +97,7 @@ uvicorn app.main:app --reload --port 8000
 .venv\Scripts\uvicorn.exe app.main:app --reload --port 8000
 ```
 
-`app/config.py` loads `backend/.env` via python-dotenv (real env vars take precedence); it is read once at startup, so restart uvicorn after editing it. See `backend/.env.example` for every key. `APP_ENV` defaults to `production`, which **refuses to start without a 32+ byte `APP_SECRET_KEY`**, disables `/docs` and seeds no accounts; local work needs `APP_ENV=development`. LLM keys: `LLM_PROVIDER` (`openai_compatible` default, `anthropic`, or `offline`), `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT` (default 15), `LLM_RETRIES` (default 3). `CERT_MIN_AVG_SCORE` (default 7) gates the certificate. The configured provider is NVIDIA (`https://integrate.api.nvidia.com/v1`, model `nvidia/nemotron-3-super-120b-a12b`). Without a working key/model the app still runs; chat/assessment fall back to a canned message.
+`app/config.py` loads `backend/.env` via python-dotenv (real env vars take precedence); it is read once at startup, so restart uvicorn after editing it. See `backend/.env.example` for every key. `APP_ENV` defaults to `production`, which **refuses to start without a 32+ byte `APP_SECRET_KEY`**, disables `/docs` and seeds no accounts; local work needs `APP_ENV=development`. LLM keys: `LLM_PROVIDER` (`openai_compatible` default, `anthropic`, or `offline`), `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`, `LLM_TIMEOUT` (default 15), `LLM_RETRIES` (default 3). `CERT_MIN_AVG_SCORE` (default 7) gates the certificate. `SERVICENOW_*` keys configure the knowledge sync; with `APP_ENV=development` it is on in mock mode (fixtures, no network) and the first sync runs 15 s after startup, so a dev `app.db` gets the synthetic articles (`SERVICENOW_ENABLED=false` turns it off; tests and e2e set `SERVICENOW_SCHEDULER=false`). The configured provider is NVIDIA (`https://integrate.api.nvidia.com/v1`, model `nvidia/nemotron-3-super-120b-a12b`). Without a working key/model the app still runs; chat/assessment fall back to a canned message.
 
 ### Frontend
 
@@ -140,8 +143,10 @@ Routers (thin HTTP, mounted under `/api/<name>` in `main.py`) → services (logi
 - RAG in `chat.py` is not retrieval: `kb_service.get_context_documents` concatenates the `content` of **every node in the selected path** into the prompt.
 - `progress_service.py` — per-user node `status` (`pending`, `in_progress`, `done`, `skipped`; one row per user and node). A node is `locked` while any dependency is not done **or skipped**; skipped unlocks dependents but never counts as done. `PUT /api/progress/node/{id}` sets status and returns 409 on a locked node unless resetting to pending. `annotate_nodes` fills `status`, `locked`, `locked_by` and `prerequisites` (with path and status, including cross-path ones).
 - `progress_service.summary` gives the streak (consecutive UTC days with any activity, surviving until a full day is missed) and the node to continue with. `certificate_service` decides eligibility server side: every node `done` and the average of each node's best non-`Unavailable` score at least `CERT_MIN_AVG_SCORE`; it returns a plain language `missing` list the page shows as is.
-- `search_service` powers `GET /api/search` (Ctrl K palette): escaped `LIKE` over path, node, subtopic and runbook titles, capped per kind, each result carrying the app URL to open.
+- `search_service` powers `GET /api/search` (Ctrl K palette): escaped `LIKE` over path, node, subtopic and runbook titles plus (within clearance) articles, applications and document names, capped per kind, each result carrying the app URL to open.
 - `routers/assessment.py` and `progress.py`/`admin.py` contain inline SQL rather than going through a service.
+- **ServiceNow knowledge** (`integrations/servicenow/`, full guide in `docs/SERVICENOW_INTEGRATION.md`): read only client (allowlisted HTTPS host, no redirects, OAuth, retries, circuit breaker), `mapping.yaml` validated at startup (an invalid mapping stops the app when the integration is on), mock client over `fixtures/` in the Table API's shape, and `SyncEngine` (incremental by `sys_updated_on >=` watermark, full retires but never deletes, keyed by KB number, one run at a time via a lock plus a `running` row in `sync_runs`). APScheduler runs in the lifespan. Migration `m006` added `kb_articles`, `applications`, `article_applications`, `article_documents`, `sync_runs`, `article_nodes`, `kb_access_log`, `runbooks.source/kb_article_id/classification` and `users.max_classification`. ServiceNow runbook rows use id `RUNBOOK_ID_OFFSET (100000) + article id`; dataset runbook ids must stay below it. Documents are stored by sha256 in `KB_DOCUMENTS_DIR` (next to the DB) and served only by the access checked download route. Article HTML goes through nh3 + markdownify and `services/prose.normalise_dashes` (the same patterns `check_no_dashes.py` imports); `body_raw_html` is never returned.
+- **Classification** (`services/classification.py`): levels public < internal < confidential < restricted; unknown content is restricted, unknown clearance is public. `CurrentUser.max_classification` is reloaded every request. Every query returning articles, documents, applications, runbooks, search results or tutor context filters with `visible_sql` / `visible_sql_named` in SQL, and hidden items return the same 404 as missing ones. Local runbooks are `internal`. `ChatRequest` takes exactly one of `path_id` or `article_id`; articles above `SERVICENOW_LLM_MAX_CLASSIFICATION` get 403 before the provider is called. Views and downloads of confidential and restricted content go to `kb_access_log` (`knowledge_service.record_access`).
 - `schemas.py` — Pydantic v2 request/response models; `frontend/src/types.ts` mirrors them by hand.
 
 ### Frontend (`frontend/src/`)
@@ -154,11 +159,12 @@ Routers (thin HTTP, mounted under `/api/<name>` in `main.py`) → services (logi
 - `RunbookLibrary.tsx` reads `/api/runbooks` and opens `?open=ID` in a native modal `<dialog>` (do not call `close()` in the effect cleanup: under StrictMode it fires `onClose` and clears the URL); `ChatAssistant.tsx` prefills from `?path=&q=`.
 - **Motion** (home page): pure CSS keyframes plus `lib/motion.ts` (`useInView`, `useCountUp`). Animate only transform and opacity, 150 to 700ms, and make every animation static under `prefers-reduced-motion`. The app shell hides topbar and footer until the auth check resolves; removing that brings back a large layout shift.
 - **Images** are self-hosted in `src/assets/images/`: photos as AVIF + WebP at 400/800/1200 px generated by `scripts/optimize-images.mjs` (source JPEGs are not committed), rendered with `components/Picture.tsx`; original SVG illustrations alongside. Any new image must be credited in both `CREDITS.md` and `src/lib/credits.ts`. The page CSP is self-only, so never hotlink images or fonts.
-- Lessons and AI Tutor replies render through `components/Markdown.tsx` (react-markdown + rehype-sanitize). Never use `dangerouslySetInnerHTML`.
+- Lessons, AI Tutor replies and knowledge articles render through `components/Markdown.tsx` (react-markdown + rehype-sanitize; in app links use the router, external links open in a new tab with `noopener noreferrer`). Never use `dangerouslySetInnerHTML`.
+- **Knowledge pages**: `/knowledge` (`KnowledgeLibrary`, all filters in the URL, loading derived from the last result's key rather than set in the effect), `/knowledge/:articleId`, `/knowledge/kb/:kbNumber` (resolves in article links), `/applications`, `/applications/:applicationId`. Shared pieces are in `components/knowledge/` (`ClassificationBadge` always pairs text with an icon), labels in `lib/knowledge.ts`, the admin panel in `components/admin/ServiceNowPanel.tsx`, the drawer section in `components/roadmap/NodeArticles.tsx`. `ChatAssistant` switches to article mode with `?article=ID`. Screen reader only text after visible text needs an explicit `{' '}` before the hidden span, or the accessible name runs the words together.
 
 ### API surface
 
-`/api/{roadmaps,progress,assessments,chat,runbooks,search,certificate,analytics,admin,auth}` plus `GET /api/health`. FastAPI serves interactive docs at `/docs` when the backend is running — use that rather than a hand-maintained endpoint table.
+`/api/{roadmaps,progress,assessments,chat,runbooks,knowledge,search,certificate,analytics,admin,auth}` plus `/api/admin/servicenow/*` and `GET /api/health`. FastAPI serves interactive docs at `/docs` when the backend is running — use that rather than a hand-maintained endpoint table.
 
 ## Writing user-facing text
 

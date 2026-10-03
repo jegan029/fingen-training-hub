@@ -192,4 +192,19 @@ Plan approved 2026-10-02. Decisions: build a dash normaliser sharing the checker
 - Note: in development StrictMode loads pages twice, so one view of a confidential article writes two audit rows; production builds write one.
 
 ### Phase 7: Tests, CI, docs
-- [ ] Vitest, Playwright (mock mode), CI additions, docs/SERVICENOW_INTEGRATION.md, README, CLAUDE.md, SECURITY_REVIEW.md
+- [x] Vitest (17): classification badge per level (text, icon, hint), library chips and debounced search through the URL and API, empty state, article actions and downloads, disabled AI Tutor with its description, hidden article message, stale banner, drawer section, admin panel (runs, sync with polling, 409 conflict)
+- [x] Playwright `e2e/knowledge.spec.ts` (mock mode, scheduler off): admin full sync from the panel; learner (internal) browses, filters, searches, opens an article and downloads `posting-flow.pdf`; restricted article by URL is a 404 with the same body as a missing one and shows "Article not available"
+- [x] CI: backend job in mock mode, bandit over the probe, probe smoke test, gitleaks on the working tree as well as history; e2e config enables mock mode
+- [x] `docs/SERVICENOW_INTEGRATION.md` (Mermaid architecture, developer instance setup, integration account permissions, env vars, mapping, sync behaviour, processing, classification, API, troubleshooting, limitations)
+- [x] README, CLAUDE.md, SECURITY_REVIEW.md (S29 to S36, threat model, tool results), .env.example
+
+### Phase 7 review
+- 256 pytest, 60 Vitest, 5 Playwright (Brave); ruff, format, bandit (app and probe), pip-audit, ESLint, Prettier, tsc, build, dash check clean; npm audit 2 moderate (S15); gitleaks clean on history, the tracked tree and docs; probe passes in mock mode.
+- Found by the new tests: download and "opens in a new tab" links had run together accessible names ("Downloadposting-flow.pdf"). Fixed with an explicit space before the hidden text.
+- Caught before commit: the first e2e run passed although its config edit had not applied (development defaults matched, but the scheduler could have raced the admin sync). Config fixed and rerun.
+
+## ServiceNow integration: definition of done
+1. Runs fully in mock mode with synthetic data: Knowledge Library, Applications, article pages, documents, admin sync panel. Done.
+2. Real instance: `scripts/servicenow_probe.py` and the client are ready; not verified, because no instance was available. Use a developer instance as described in the docs.
+3. Classification enforced server side on every path, including search, runbooks, downloads and the AI Tutor. Done, with tests and mutation checks.
+4. No secrets, real KB content or client identifiers committed; all tests and checks pass; documentation updated. Done.

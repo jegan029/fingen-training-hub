@@ -128,8 +128,8 @@ export default function ApplicationDetail() {
                     </span>
                   </span>
                   <a href={documentDownloadUrl(d.id)} download className={`${page.btn} ${page.btnSm}`}>
-                    <Download size={14} aria-hidden="true" /> Download
-                    <span className={page.srOnly}> {d.file_name}</span>
+                    <Download size={14} aria-hidden="true" /> Download{' '}
+                    <span className={page.srOnly}>{d.file_name}</span>
                   </a>
                 </li>
               ))}
