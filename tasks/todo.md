@@ -252,4 +252,14 @@ Plan approved 2026-10-03: CSS plus View Transitions (no animation library), draw
 - Changed from the plan: no hidden data table, because the legend and bar rows already show every value as text
 
 ### Phase H: Finish
-- [ ] Tests, batched visual check (1440 and 390, both themes, reduced motion), detector, finish review, DESIGN.md, docs, PR
+- [x] Tests: Vitest 51 to 82 since Phase A started, covering motion helpers, ring, status change, completion moment, sections, assessment, chat, analytics, plus a view transition regression; Playwright learner flow asserts the unlock announcement
+- [x] Batched visual check in Brave at 1440 and 390, light and dark, motion on and reduced motion
+- [x] Detector: only pre-existing findings plus the overshoot easing, which was replaced
+- [x] Finish review (fix, then a verdict pass): applied stagger order, labelled lattice, scrim cleared during the completion moment, done reads as achieved, calmer pop, header orphan; found and fixed the title morph never running (rAF paused during view transition updates); morph proven by an animation dump (node-title group 450 ms from the drawer title to the lesson heading)
+- [x] DESIGN.md and `.impeccable/design.json` recorded from the shipped system; surface brief holds the direction contract
+- [x] CLAUDE.md and README motion notes
+
+### Motion pass review
+- No new dependency. JS gzip across all chunks 163.2 to 167.9 kB (main chunk 16.7 to 17.3 kB), CSS gzip 24.8 to 27.7 kB.
+- Open, for the user: uppercase eyebrow labels above headings on the assessment, home and certificate pages (pre-existing, the craft floor bans them); a cue for a topic unlocked below the fold; the corporate brand guide.
+- Incident: a temporary worktree with a junction to `node_modules` deleted part of the real folder on removal; restored with `npm ci` (lockfile unchanged), lesson recorded.

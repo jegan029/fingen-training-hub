@@ -23,7 +23,7 @@
   stroke: var(--color-surface-2);
 }
 
-/* The one paint only animation in the system: the arc's dash offset. It causes no layout. */
+/* Paint only exception (shared with the analytics arcs): the arc's dash offset. It causes no layout. */
 .arc {
   stroke: var(--color-accent);
   stroke-linecap: round;

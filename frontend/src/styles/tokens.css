@@ -75,7 +75,7 @@
 
   /*
    * Motion. Defined once and reused everywhere; motion shows a change of state or progress, never decoration.
-   * Only transform and opacity animate (the progress ring's stroke is the one paint only exception).
+   * Only transform and opacity animate (progress ring and analytics arcs animate stroke dash offset, the paint only exception).
    */
   --motion-instant: 100ms;
   --motion-fast: 150ms;
