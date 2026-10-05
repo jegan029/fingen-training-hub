@@ -245,7 +245,7 @@
       "heading-navy": {
         "role": "neutral",
         "displayName": "Heading Navy",
-        "canonical": "#020b5b",
+        "canonical": "#0a0f4d",
         "theme": "light",
         "oklch": "oklch(22.9% 0.137 265.2)",
         "tonalRamp": [
@@ -280,7 +280,7 @@
       "electric-blue": {
         "role": "primary",
         "displayName": "Electric Blue",
-        "canonical": "#001aff",
+        "canonical": "#2433ff",
         "theme": "light",
         "oklch": "oklch(46.3% 0.306 264.2)",
         "tonalRamp": [
@@ -297,7 +297,7 @@
       "electric-blue-deep": {
         "role": "primary",
         "displayName": "Electric Blue Deep",
-        "canonical": "#0014cc",
+        "canonical": "#1a27d6",
         "theme": "light",
         "oklch": "oklch(39.2% 0.258 264.2)",
         "tonalRamp": [
