@@ -34,7 +34,7 @@
 .heroArt {
   position: absolute;
   inset: 0 0 0 50%;
-  background: #020b5b;
+  background: #0a0f4d;
 }
 
 .heroImg {
@@ -480,7 +480,7 @@
 
 /* ── Call to action ─────────────────────────── */
 .cta {
-  background: #020b5b;
+  background: #0a0f4d;
   color: #ffffff;
   padding: var(--space-6) var(--space-5);
 }

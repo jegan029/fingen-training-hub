@@ -1,98 +1,144 @@
-/* The sign in screen keeps the brand navy background in both themes; the card follows the theme. */
+/*
+ * Desktop: full viewport split, brand 58% and sign in 42%, no page scroll.
+ * Tablet: the brand panel becomes a band across the top and the card overlaps its lower edge.
+ * Phone: the card alone on the scene's gradient, with the logo above it.
+ */
 .screen {
-  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 58fr 42fr;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.brand {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.signin {
   display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--space-6) clamp(var(--space-5), 4vw, var(--space-8)) var(--space-4);
+  background: var(--color-surface);
+  overflow-y: auto;
+}
+
+.center {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6) var(--space-4);
-  background: #020b5b radial-gradient(ellipse at 60% 40%, rgba(0, 26, 255, 0.25) 0%, transparent 60%);
-  font-family: var(--font-sans);
+  gap: var(--space-4);
 }
 
-.logo {
-  margin-bottom: var(--space-6);
+/* On the plain surface the card needs no frame of its own: it is the panel. */
+@media (min-width: 1024px) {
+  .center > :first-child {
+    padding: 0;
+    border-color: transparent;
+    box-shadow: none;
+    background: transparent;
+  }
 }
 
-.card {
+.smallPrint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   width: 100%;
   max-width: 420px;
-  padding: var(--space-6) var(--space-6) var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-lg);
-}
-
-.cardHead {
-  margin-bottom: var(--space-5);
-  padding-bottom: var(--space-4);
-  border-bottom: 3px solid var(--color-accent);
-}
-
-.title {
-  margin: 0 0 var(--space-1);
-  font: 700 1.4rem / 1.2 var(--font-display);
-  color: var(--color-heading);
-}
-
-.subtitle {
-  margin: 0;
-  font-size: var(--text-sm);
+  margin: var(--space-4) auto 0;
   color: var(--color-text-muted);
-}
-
-.submit {
-  width: 100%;
-}
-
-.demo {
-  width: 100%;
-  max-width: 420px;
-  margin-top: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.07);
-  color: rgba(255, 255, 255, 0.78);
   font-size: var(--text-xs);
 }
 
-.demoTitle {
-  margin: 0 0 var(--space-3);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.dev {
+  width: 100%;
+  max-width: 420px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-warning);
+  border-radius: var(--radius-md);
+  background: var(--color-warning-soft);
+  color: var(--color-text);
+  font-size: var(--text-xs);
 }
 
-.demoRow {
+.devTitle {
+  margin: 0 0 var(--space-1);
+  font-weight: 700;
+  color: var(--color-warning);
+}
+
+.devText {
+  margin: 0 0 var(--space-2);
+}
+
+.devRow {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  gap: var(--space-2) var(--space-4);
 }
 
-.demoRole {
-  min-width: 52px;
-  font-weight: 700;
-}
-
-.demoEmail {
+.devEmail {
   padding: 0;
   border: 0;
   background: none;
-  color: #c7cffe;
-  font: 400 var(--text-xs) / 1.4 var(--font-mono);
-  text-decoration: underline dotted;
+  color: var(--color-accent);
+  font: 600 var(--text-xs) / 1.4 var(--font-sans);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
-.demoEmail:hover {
-  color: #fff;
+@media (max-width: 1023px) {
+  .screen {
+    display: block;
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+    background: var(--color-bg);
+  }
+
+  .brand {
+    min-height: 360px;
+  }
+
+  .signin {
+    position: relative;
+    z-index: 1;
+    margin-top: -80px;
+    padding-top: 0;
+    background: transparent;
+    overflow: visible;
+  }
 }
 
-.demoNote {
-  margin: var(--space-2) 0 0;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.65);
+/* Phones: the scene fills the screen behind the card; only the logo stays above it. */
+@media (max-width: 767px) {
+  .screen {
+    position: relative;
+    background: var(--scene-navy);
+  }
+
+  .brand {
+    position: absolute;
+    inset: 0;
+    min-height: 0;
+  }
+
+  .signin {
+    margin-top: 0;
+    padding: 104px var(--space-4) var(--space-4);
+  }
+
+  .smallPrint {
+    color: var(--scene-text-muted);
+  }
 }

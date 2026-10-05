@@ -16,10 +16,10 @@ colors:
   ink-dark: "#e6e9f5"
   ink-muted: "#4d5673"
   ink-muted-dark: "#a8b0cc"
-  heading-navy: "#020b5b"
+  heading-navy: "#0a0f4d"
   heading-dark: "#f1f3fb"
-  electric-blue: "#001aff"
-  electric-blue-deep: "#0014cc"
+  electric-blue: "#2433ff"
+  electric-blue-deep: "#1a27d6"
   periwinkle: "#8c9bff"
   periwinkle-light: "#a9b4ff"
   on-accent: "#ffffff"
@@ -209,7 +209,7 @@ The Training Hub is a quiet, cool-paper console in navy and one electric blue, w
 
 Density is moderate and desk oriented: content columns of 780 to 1080px, cards with 24px insides, a 4px spacing scale. Depth is mostly borders and tonal surfaces with soft navy-tinted shadows; nothing floats without a reason. Both a light and a dark theme are maintained from one token file, and status or classification is never carried by colour alone.
 
-This file records what ships. A corporate brand guide applies to future work but **has not been supplied** (see PRODUCT.md). Nothing here is a brand rule from that guide; when it arrives, reconcile this record against it rather than the other way round. The FinGen mark (`components/Logo.tsx`) is the only binding identity asset.
+This file records what ships. A corporate brand guide applies to future work but **has not been supplied** (see PRODUCT.md). Nothing here is a brand rule from that guide; when it arrives, reconcile this record against it rather than the other way round. The only binding identity asset is the FinGen icon and logo pack (October 2026). It defines the mark (`components/Logo.tsx`, mirrored in `public/favicon.svg` and `public/apple-touch-icon.png`), its lockups, and the core palette: Electric Blue `#2433ff`, Deep Navy `#0a0f4d` (Heading Navy here) and white. The mark's tile stays Electric Blue in both themes and on dark bands. The pack's Soft Violet `#6b5cff` has no assigned role yet, so it is not a token.
 
 **Key Characteristics:**
 - Cool off-white canvas, white surfaces, deep navy headings, a single saturated electric blue accent.

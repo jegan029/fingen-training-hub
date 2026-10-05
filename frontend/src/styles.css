@@ -15,7 +15,7 @@
   --ss-border: var(--color-border);
   --ss-text: var(--color-text);
   --ss-muted: var(--color-text-muted);
-  --ss-footer: #020b5b;
+  --ss-footer: #0a0f4d;
 
   --blue: var(--color-accent);
   --green: var(--color-success);
@@ -300,7 +300,7 @@ hr.divider {
 /* Always a white button on a dark band, so its text stays the fixed brand blue in both themes. */
 .ss-btn-white {
   background: #fff;
-  color: #001aff;
+  color: #2433ff;
 }
 .ss-btn-white:hover {
   background: #e8ecff;

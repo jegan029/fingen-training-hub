@@ -16,14 +16,16 @@
   /* Text */
   --color-text: #0f1733;
   --color-text-muted: #4d5673;
-  --color-heading: #020b5b;
+  --color-heading: #0a0f4d;
 
   /* Brand */
-  --color-accent: #001aff;
-  --color-accent-hover: #0014cc;
+  --color-accent: #2433ff;
+  --color-accent-hover: #1a27d6;
   --color-accent-contrast: #ffffff;
   --color-accent-soft: #e6e9ff;
-  --color-focus: #001aff;
+  --color-focus: #2433ff;
+  /* Logo tile: Electric Blue in both themes, so it is not redefined for dark. */
+  --brand-mark: #2433ff;
 
   /* Feedback */
   --color-success: #13723a;
@@ -35,14 +37,24 @@
 
   /* Roadmap */
   --rm-main-bg: #e6e9ff;
-  --rm-main-border: #001aff;
-  --rm-main-text: #020b5b;
+  --rm-main-border: #2433ff;
+  --rm-main-text: #0a0f4d;
   --rm-sub-bg: #ffffff;
   --rm-sub-border: #b9bfd3;
   --rm-line: #3b5bff;
   --rm-line-muted: #aab4e8;
   --rm-done-bg: #e3f4e9;
   --rm-done-border: #13723a;
+
+  /* Sign in scene: the brand panel stays dark in both themes, so these are not redefined for dark. */
+  --scene-navy: #0a0f4d;
+  --scene-signal: #2433ff;
+  --scene-violet: #4b1fd1;
+  --scene-night: #060a2e;
+  --scene-star: #aab4e8;
+  --scene-lit: #5fd08d;
+  --scene-text: #f1f3fb;
+  --scene-text-muted: #c3c9e8;
 
   /* Typography */
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;

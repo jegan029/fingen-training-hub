@@ -11,7 +11,7 @@ test.describe.configure({ mode: 'serial' })
 async function signIn(page: Page, account: { email: string; password: string }) {
   await page.goto('/login')
   await page.getByLabel('Email address').fill(account.email)
-  await page.getByLabel('Password').fill(account.password)
+  await page.getByLabel('Password', { exact: true }).fill(account.password)
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL('/')
 }

@@ -1,9 +1,12 @@
+import math
+import time
 from dataclasses import dataclass
 from datetime import timedelta
 
 import jwt
 from fastapi import Depends, HTTPException, Request, Response, status
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -97,6 +100,20 @@ def user_or_ip_key(request: Request) -> str:
 
 
 limiter = Limiter(key_func=get_remote_address)
+
+
+def rate_limit_exceeded(request: Request, exc: RateLimitExceeded) -> Response:
+    """slowapi's 429 response plus Retry-After (whole seconds until the window resets), so the sign in page
+    can count down. Limits, keys and the response body are unchanged."""
+    response = _rate_limit_exceeded_handler(request, exc)
+    current = getattr(request.state, "view_rate_limit", None)
+    try:
+        reset_at, _remaining = limiter.limiter.get_window_stats(current[0], *current[1])
+        retry_after = math.ceil(reset_at - time.time())
+    except Exception:  # noqa: BLE001  fall back to the length of the window that was hit
+        retry_after = exc.limit.limit.get_expiry()
+    response.headers["Retry-After"] = str(max(1, retry_after))
+    return response
 
 
 # ── Middleware ──────────────────────────────────────────────
