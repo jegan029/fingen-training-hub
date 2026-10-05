@@ -7,54 +7,54 @@
     </linearGradient>
   </defs>
   <rect width="800" height="450" fill="url(#bg)"/>
-  <circle cx="190" cy="250" r="150" fill="#001aff" fill-opacity=".06"/>
+  <circle cx="190" cy="250" r="150" fill="#2433ff" fill-opacity=".06"/>
 
   <!-- Learner at a laptop -->
   <g>
-    <circle cx="170" cy="165" r="34" fill="#020b5b"/>
-    <path d="M 105 300 C 105 240, 130 212, 170 212 C 210 212, 235 240, 235 300 Z" fill="#001aff"/>
-    <rect x="80" y="300" width="230" height="12" rx="6" fill="#020b5b"/>
+    <circle cx="170" cy="165" r="34" fill="#0a0f4d"/>
+    <path d="M 105 300 C 105 240, 130 212, 170 212 C 210 212, 235 240, 235 300 Z" fill="#2433ff"/>
+    <rect x="80" y="300" width="230" height="12" rx="6" fill="#0a0f4d"/>
     <path d="M 205 300 L 230 238 L 318 238 L 296 300 Z" fill="#b8c2ff"/>
     <path d="M 214 294 L 234 246 L 306 246 L 289 294 Z" fill="#ffffff"/>
-    <g fill="#001aff" fill-opacity=".45">
+    <g fill="#2433ff" fill-opacity=".45">
       <rect x="240" y="258" width="44" height="5" rx="2.5"/>
       <rect x="236" y="270" width="34" height="5" rx="2.5"/>
     </g>
-    <rect x="100" y="312" width="16" height="70" rx="6" fill="#020b5b" fill-opacity=".85"/>
-    <rect x="268" y="312" width="16" height="70" rx="6" fill="#020b5b" fill-opacity=".85"/>
+    <rect x="100" y="312" width="16" height="70" rx="6" fill="#0a0f4d" fill-opacity=".85"/>
+    <rect x="268" y="312" width="16" height="70" rx="6" fill="#0a0f4d" fill-opacity=".85"/>
   </g>
 
   <!-- Chat panel -->
   <g font-family="Inter, Segoe UI, Arial, sans-serif">
     <rect x="370" y="46" width="390" height="358" rx="18" fill="#ffffff" stroke="#c9d0f5" stroke-width="1.5"/>
-    <rect x="370" y="46" width="390" height="44" rx="18" fill="#020b5b"/>
-    <rect x="370" y="72" width="390" height="18" fill="#020b5b"/>
+    <rect x="370" y="46" width="390" height="44" rx="18" fill="#0a0f4d"/>
+    <rect x="370" y="72" width="390" height="18" fill="#0a0f4d"/>
     <circle cx="396" cy="68" r="9" fill="#8c9bff"/>
     <text x="414" y="73" font-size="14" font-weight="700" fill="#ffffff">AI Tutor</text>
 
     <!-- Question -->
-    <rect x="496" y="108" width="246" height="58" rx="14" fill="#001aff"/>
+    <rect x="496" y="108" width="246" height="58" rx="14" fill="#2433ff"/>
     <text x="512" y="132" font-size="13" fill="#ffffff">Why is my settlement batch</text>
     <text x="512" y="152" font-size="13" fill="#ffffff">stuck in PROCESSING?</text>
 
     <!-- Answer -->
     <rect x="388" y="182" width="300" height="142" rx="14" fill="#eef0ff"/>
-    <g fill="#020b5b" fill-opacity=".55">
+    <g fill="#0a0f4d" fill-opacity=".55">
       <rect x="404" y="200" width="248" height="8" rx="4"/>
       <rect x="404" y="218" width="266" height="8" rx="4"/>
       <rect x="404" y="236" width="220" height="8" rx="4"/>
       <rect x="404" y="254" width="240" height="8" rx="4"/>
     </g>
     <text x="404" y="286" font-size="11" font-weight="700" fill="#4d5673">SOURCES</text>
-    <rect x="404" y="294" width="132" height="22" rx="11" fill="#ffffff" stroke="#001aff" stroke-width="1.2"/>
-    <text x="470" y="309" font-size="11" font-weight="600" fill="#001aff" text-anchor="middle">Settlement Processing</text>
-    <rect x="542" y="294" width="132" height="22" rx="11" fill="#ffffff" stroke="#001aff" stroke-width="1.2"/>
-    <text x="608" y="309" font-size="11" font-weight="600" fill="#001aff" text-anchor="middle">Batch Job Monitoring</text>
+    <rect x="404" y="294" width="132" height="22" rx="11" fill="#ffffff" stroke="#2433ff" stroke-width="1.2"/>
+    <text x="470" y="309" font-size="11" font-weight="600" fill="#2433ff" text-anchor="middle">Settlement Processing</text>
+    <rect x="542" y="294" width="132" height="22" rx="11" fill="#ffffff" stroke="#2433ff" stroke-width="1.2"/>
+    <text x="608" y="309" font-size="11" font-weight="600" fill="#2433ff" text-anchor="middle">Batch Job Monitoring</text>
 
     <!-- Input -->
     <rect x="388" y="344" width="354" height="40" rx="20" fill="#f3f5ff" stroke="#c9d0f5"/>
     <text x="408" y="369" font-size="12" fill="#4d5673">Ask about your training path</text>
-    <circle cx="720" cy="364" r="14" fill="#001aff"/>
+    <circle cx="720" cy="364" r="14" fill="#2433ff"/>
     <path d="M 714 364 L 726 364 M 721 358 L 727 364 L 721 370" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>

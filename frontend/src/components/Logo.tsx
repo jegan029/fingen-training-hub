@@ -7,36 +7,38 @@ interface LogoProps {
   subtitle?: boolean
 }
 
-/** FinGen mark: a tiny roadmap (spine, three nodes, one branch) next to the wordmark. */
+/**
+ * FinGen mark: a path that rises from the stem of an "F" into an arrow, with a branch ending in a node.
+ * The tile stays Electric Blue on every surface; only the wordmark follows the tone.
+ * The same drawing is in public/favicon.svg and public/apple-touch-icon.png; keep them in step.
+ */
 export default function Logo({ tone = 'theme', size = 30, subtitle = true }: LogoProps) {
   const themed = tone === 'theme'
-  const markBg = themed ? 'var(--color-accent)' : '#ffffff'
-  const markFg = themed ? 'var(--color-accent-contrast)' : '#001aff'
   const text = themed ? 'var(--color-heading)' : '#ffffff'
-  const sub = themed ? 'var(--color-text-muted)' : 'rgba(255,255,255,.6)'
+  const sub = themed ? 'var(--color-heading)' : 'rgba(255,255,255,.75)'
 
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: size * 0.3 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: size * 0.32 }}>
       <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-        <rect width="32" height="32" rx="7" fill={markBg} />
-        <path d="M11 7v18" stroke={markFg} strokeWidth="2.2" strokeLinecap="round" />
-        <path d="M11 16c4 0 6-3.5 10-3.5" stroke={markFg} strokeWidth="2" strokeLinecap="round" fill="none" />
-        <circle cx="11" cy="8" r="2.6" fill={markFg} />
-        <circle cx="11" cy="16" r="2.6" fill={markFg} />
-        <circle cx="11" cy="24" r="2.6" fill="none" stroke={markFg} strokeWidth="1.8" />
-        <circle cx="22.5" cy="12.5" r="2.6" fill={markFg} />
+        <rect width="32" height="32" rx="7.5" fill="var(--brand-mark)" />
+        <g fill="none" stroke="#ffffff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9.5 25.5V18c0-4.6 3-7 7-7c3 0 5-1.6 7-3.6" />
+          <path d="M19.2 7.4h4.3v4.3" />
+          <path d="M9.5 22.5c0-3.3 2.4-5.2 5.6-5.2h3.4" />
+        </g>
+        <circle cx="21" cy="17.3" r="2.6" fill="#ffffff" />
       </svg>
       <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1, fontFamily: 'Inter, sans-serif' }}>
-        <span style={{ fontSize: size * 0.6, fontWeight: 700, color: text, letterSpacing: '-.01em' }}>FinGen</span>
+        <span style={{ fontSize: size * 0.66, fontWeight: 700, color: text, letterSpacing: '-.025em' }}>FinGen</span>
         {subtitle && (
           <span
             style={{
-              fontSize: Math.max(9, size * 0.3),
-              fontWeight: 700,
+              fontSize: Math.max(9, size * 0.26),
+              fontWeight: 600,
               color: sub,
-              letterSpacing: '.1em',
+              letterSpacing: '.24em',
               textTransform: 'uppercase',
-              marginTop: size * 0.08,
+              marginTop: size * 0.1,
             }}
           >
             Training Hub
